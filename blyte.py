@@ -1559,11 +1559,11 @@ class MyFrame(wxFrame):
 
         # this is hidden here because it's somewhat harder to find here
         # than in misc.pyo
-        misc.version = "1.2-dev"
+        misc.version = "1.2.0"
 
         # slightly obfuscated in a desperate attempt to fool at least some
         # people...
-        misc.releaseDate = datetime.date(500 * 4 + 5, 10 - 2, -4 + 11)
+        misc.releaseDate = datetime.date(500 * 4 + 5, 12 - 4 + 2, -4 + 17)
 
         misc.license = None
 

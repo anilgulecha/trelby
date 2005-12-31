@@ -1318,10 +1318,13 @@ class Screenplay:
     # position.
     def joinLines(self, line):
         ls = self.lines
+        ln = ls[line]
         
-        pos = len(ls[line].text)
-        ls[line].text += ls[line + 1].text
-        ls[line].lb = ls[line + 1].lb
+        pos = len(ln.text)
+        ln.text += ls[line + 1].text
+        ln.lb = ls[line + 1].lb
+
+        self.setLineTypes(line + 1, ln.lt)
         del ls[line + 1]
 
         self.line = line
@@ -1374,6 +1377,19 @@ class Screenplay:
             self.column = column
             self.line = line
 
+    # set line types from 'line' to the end of the element to 'lt'.
+    def setLineTypes(self, line, lt):
+        ls = self.lines
+        
+        while 1:
+            ln = ls[line]
+
+            ln.lt = lt
+            if ln.lb == LB_LAST:
+                break
+
+            line += 1
+        
     def line2page(self, line):
         return self.line2pageReal(line, self.pages)
 
@@ -1713,30 +1729,41 @@ class Screenplay:
                         
             else:
 
-                # if the selection ends by removing completely the last
-                # line of an element, we need to mark the element's new
-                # end, otherwise we must set it to LB_NONE so that the new
-                # element is reformatted properly.
-                if self.isLastLineOfElem(marked[1]) and not ls[marked[1]].text:
-                    lb = LB_LAST
-                else:
-                    lb = LB_NONE
-
                 # now find the line whose linebreak we need to adjust. if
                 # the starting line is not completely removed, it is that,
                 # otherwise it is the preceding line, unless we delete the
-                # first line, in which case there's nothing to adjust.
+                # first line of the element, in which case there's nothing
+                # to adjust.
                 if ls[marked[0]].text:
                     ln = ls[marked[0]]
                 else:
-                    if marked[0] != 0:
+                    if not self.isFirstLineOfElem(marked[0]):
                         ln = ls[marked[0] - 1]
                     else:
                         ln = None
 
                 if ln:
-                    ln.lb = lb
-
+                    # if the selection ends by removing completely the
+                    # last line of an element, we need to mark the
+                    # element's new end, otherwise we must set it to
+                    # LB_NONE so that the new element is reformatted
+                    # properly.
+                    if self.isLastLineOfElem(marked[1]) and \
+                           not ls[marked[1]].text:
+                        ln.lb = LB_LAST
+                    else:
+                        ln.lb = LB_NONE
+                    
+            # if we're joining two elements of different type, we have to
+            # change the line types for the latter element (starting from
+            # the last marked line, because everything before that will
+            # get deleted anyway) to that of the first element, because
+            # otherwise rewrapPara will stop if it sees a forced linebreak
+            # and the rest of the element's lines will have invalid types.
+            # note that we always do this because there is not a case
+            # where doing it would be harmful.
+            self.setLineTypes(marked[1], ls[marked[0]].lt)
+            
             del ls[del1:del2 + 1]
 
             self.clearMark()
@@ -2402,6 +2429,45 @@ class Screenplay:
 
     def toNoteCmd(self, cs):
         self.convertCurrentTo(NOTE)
+
+    # check script for internal consistency. raises an AssertionError on
+    # errors. ONLY MEANT TO BE USED IN TEST CODE.
+    def _validate(self):
+        # True when we're analyzing the first line of an element
+        startOfElem = True
+
+        # type of previous line
+        prevType = None
+
+        # there must be at least one line
+        assert len(self.lines) > 0
+
+        # cursor position must be valid
+        assert self.line >= 0
+        assert self.line < len(self.lines)
+        assert self.column >= 0
+        assert self.column <= len(self.lines[self.line].text)
+        
+        for ln in self.lines:
+            tcfg = self.cfg.getType(ln.lt)
+
+            # lines should not contain invalid characters
+            assert ln.text == util.toInputStr(ln.text)
+
+            # lines should never be longer than the type's maximum width
+            assert len(ln.text) <= tcfg.width
+            
+            # lines with LB_NONE linebreaks that end in a space should be
+            # LB_SPACE[2] instead
+            if ln.lb == LB_NONE:
+                assert ln.text[-1:] != " "
+
+            if not startOfElem:
+                # line type should be the same for all lines in an element
+                assert ln.lt == prevType
+
+            prevType = ln.lt
+            startOfElem = ln.lb == LB_LAST
 
 # one line in a screenplay
 class Line:

@@ -4,6 +4,12 @@ Installation instructions for Trelby on Linux (tar.gz)
 You have to copy trelby/ to /opt/trelby/. Afterwards you can run the
 program with the command "/opt/trelby/src/trelby.py".
 
+Once you have the tarball you may need to run
+  tar xvzf <tarball>
+  cd trelby
+  # run make install as root
+  sudo make install
+
 External dependencies required:
 
  * Python (2.6 or 2.7)

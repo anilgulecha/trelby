@@ -13,7 +13,7 @@ mkdir -p $DIR
 
 FNAME="trelby-$VER.tar"
 rm -f src/*.pyc
-cp -r src/ trelby.desktop names.txt.gz dict_en.dat.gz sample.trelby manual.html fileformat.txt LICENSE README resources/ $DIR
+cp -r src/ trelby.desktop names.txt.gz dict_en.dat.gz sample.trelby manual.html fileformat.txt LICENSE README Makefile resources/ $DIR
 cp README.linux $BASE_DIR/README
 
 cd linux-dist

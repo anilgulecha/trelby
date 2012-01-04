@@ -59,6 +59,9 @@ VIEWMODE_OVERVIEW_SMALL,\
 VIEWMODE_OVERVIEW_LARGE,\
 = range(5)
 
+# pixels to add to the page width to get the minimum size of window
+WIDTH_PADDING = 100
+
 def refreshGuiConfig():
     global cfgGui
 
@@ -265,6 +268,15 @@ class MyCtrl(wx.Control):
         # page width and height on screen, in pixels
         self.pageW = int(self.pageW)
         self.pageH = int(self.mm2p * self.sp.cfg.paperHeight)
+
+        # set minimum width
+        if gd.viewMode == VIEWMODE_DRAFT or gd.viewMode == VIEWMODE_LAYOUT:
+            w,h = mainFrame.GetSize()
+            newMinWidth = self.pageW + WIDTH_PADDING
+            if w < newMinWidth:
+                mainFrame.SetSize((newMinWidth,-1))
+            mainFrame.SetMinSize((newMinWidth,-1))
+
 
     def getCfgGui(self):
         return cfgGui

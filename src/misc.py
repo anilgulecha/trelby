@@ -9,6 +9,7 @@ import sys
 import wx
 
 TAB_BAR_HEIGHT = 24
+NAVIGATOR_WIDTH = 280
 
 def init(doWX = True):
     global isWindows, isUnix, unicodeFS, wxIsUnicode, doDblBuf, \
@@ -119,12 +120,13 @@ class MyColorSample(wx.Window):
 
 # Custom "exit fullscreen" button for our tab bar. Used so that we have
 # full control over the button's size.
-class MyFSButton(wx.Window):
-    def __init__(self, parent, id, getCfgGui):
+class MyButton(wx.Window):
+    # bitmap - icon to use for the button
+    def __init__(self, parent, id, bitmap, getCfgGui):
         wx.Window.__init__(self, parent, id, size = (TAB_BAR_HEIGHT, TAB_BAR_HEIGHT))
 
         self.getCfgGui = getCfgGui
-        self.fsImage = getBitmap("resources/fullscreen.png")
+        self.fsImage = getBitmap(bitmap)
 
         wx.EVT_PAINT(self, self.OnPaint)
         wx.EVT_LEFT_DOWN(self, self.OnMouseDown)
@@ -146,6 +148,195 @@ class MyFSButton(wx.Window):
         clickEvent = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED, self.GetId())
         clickEvent.SetEventObject(self)
         self.GetEventHandler().ProcessEvent(clickEvent)
+
+# Represents an item in the scene navigator list.
+class NavigatorItem():
+    def __init__(self, lineNo, sceneNo = 0, sceneText = None,
+                    noteText=None, actionText = None):
+        # screenplay line attached to this item.
+        self.lineNo = lineNo
+        # scene number.
+        self.sceneNo = sceneNo
+        # num of lines in this scene
+        self.sceneLen = 0
+
+        # text that forms the item.
+        self.sceneText = sceneText
+        self.noteText = noteText
+        self.actionText = actionText
+
+    def hasSameText(self, another):
+        if another.sceneText != self.sceneText or \
+            another.noteText != self.noteText or \
+            another.actionText != self.actionText:
+            return False
+        return True
+
+    # Returns html representation of item for use by MyNavigator.
+    #  selected : bool - defines if this item is selected
+    #  cfg : global config gui object
+    def getHtml(self, selected, cfg):
+        fontTag = "face='%s'" % cfg.fonts[0].font.GetFaceName()
+
+        if selected:
+            sceneColorTag = "color='%s'" % cfg.navSceneSelectedTextColor.GetAsString()
+        else:
+            sceneColorTag = "color='%s'" % cfg.navSceneTextColor.GetAsString()
+        noteColorTag = "color='%s'" % cfg.navNoteTextColor.GetAsString()
+        actionColorTag = "color='%s'" % cfg.navActionTextColor.GetAsString()
+        bgColorTag = "color='%s'" % cfg.textBgColor.GetAsString()
+        bgSelectedColorTag = "color='%s'" % cfg.navAnnotatedBgColor.GetAsString()
+        if self.sceneNo == -1:
+            sceneNoTxt = ""
+        else:
+            sceneNoTxt = "%s." % self.sceneNo
+
+        fntSize = cfg.navFontSize + 2
+        fntSizeSmall = cfg.navFontSmallSize + 2
+
+        if self.sceneText and not self.noteText:
+            if self.actionText:
+                actionBlurb = "<br><font %s size='%d'>%s</font>" % (
+                actionColorTag, fntSizeSmall, self.actionText)
+            else:
+                actionBlurb = ""
+
+            retval = "<font %s %s size='%d'>%s %s</font>" % (fontTag,
+                sceneColorTag, fntSize, sceneNoTxt, self.sceneText) + actionBlurb
+
+            return retval
+
+        elif self.noteText and not self.sceneText:
+            return "<font %s size='%d'>&nbsp;&nbsp;%s</font>" % (
+                noteColorTag, fntSizeSmall, self.noteText)
+
+        elif self.noteText and self.sceneText:
+            return "<font %s %s size='%d'>%s %s</font><br>"\
+                "<b><font %s size='%d'>%s</font></b>" % (fontTag,
+                sceneColorTag, fntSize, sceneNoTxt, self.sceneText,
+                noteColorTag, fntSize, self.noteText)
+        else:
+            return ""
+
+# wx.HtmlListBox derives from wx.VListBox, but draws each item
+# itself as a wx.HtmlCell. Abstract class - need to define OnGetItem
+
+# MyNavigator is our control to show a list of Scenes/Notes in a sidebar.
+# This control shows active element via blue text, and not via native
+# selection, which is very distracting.
+class MyNavigator(wx.HtmlListBox):
+
+    # to be called after an instance has been created.
+    def __init__(self, parent, id, getCfgGui):
+        wx.HtmlListBox.__init__(self, parent, id, size = (NAVIGATOR_WIDTH, -1), style = wx.NO_BORDER)
+        self.items = []
+        self.currentLine = 0
+        self.selectedIndex = -1
+        self.SetMargins((5,3))
+        self.getCfgGui = getCfgGui
+        self.SetItemCount(0)
+
+    # called after new global settings are applied
+    def fullRedraw(self):
+        self.SetItemCount(len(self.items))
+        self.Refresh()
+
+    # given a line number, return the index of element that it lies under
+    def getIndexFromLineNo(self, lineno):
+        if not self.items:
+            return 0
+
+        i = len(self.items) - 1
+        selectedIndex = 0
+        if lineno >= self.items[i].lineNo:
+            return i
+        else:
+            while i > 0:
+                if lineno < self.items[i].lineNo and \
+                    lineno >= self.items[i-1].lineNo:
+                    # i-1 is the index of the item to be show.
+                    return i-1
+                i = i-1
+        # we're now at the topmost element.
+        return 0
+
+    # Select an item in the list.
+    #  newIndex - index of what is to be selected.
+    #  fullRefresh - if the entire list should be refreshed.
+    def selectItemByIndex(self, newIndex, fullRefresh):
+        if newIndex == self.selectedIndex and not fullRefresh:
+            return
+
+        oldIndex = self.selectedIndex
+        self.selectedIndex = newIndex
+        numItems = len(self.items)
+
+        # The various selection hi-jinx below is to ensure the navigator
+        # scroll remains constant. HtmlListbox has a property where when
+        # selected, it brings the item into view. So upon new selection,
+        # we save the navigator first,last values, and use these to reset
+        # the scroll position.
+
+        # The reason we select the oldIndex is to make wx update that value.
+        firstVisible = self.GetFirstVisibleLine()
+        lastVisible = self.GetLastVisibleLine()
+        if fullRefresh:
+            self.SetItemCount(numItems)
+        self.SetSelection(oldIndex)
+        if oldIndex < firstVisible or oldIndex > lastVisible:
+            if lastVisible in range(0, self.GetItemCount()):
+                self.SetSelection(lastVisible)
+            self.SetSelection(firstVisible)
+        self.SetSelection(newIndex)
+        self.SetSelection(-1)
+        if fullRefresh:
+            self.Refresh()
+
+    # Check if text is different between newItems/self.Items
+    def contentsChanged(self, newItems):
+        if len(newItems) != len(self.items):
+            return True
+        i = len(newItems) - 1
+        while i >= 0:
+            if not newItems[i].hasSameText(self.items[i]):
+                return True
+            i = i-1
+        return False
+
+    # Update the navigator list
+    #  items - A list containing NavigatorItem objects
+    def setItems(self, items, currentLine):
+        fullRefresh = (len(items) != len(self.items)) or \
+                self.contentsChanged(items)
+
+        self.items = items
+        newIndex = self.getIndexFromLineNo(currentLine)
+        self.selectItemByIndex(newIndex, fullRefresh)
+
+    # A virtual function. Returns item 'n' in list.
+    def OnGetItem(self, n):
+        if n == self.selectedIndex:
+            return self.items[n].getHtml(True, self.getCfgGui())
+        else:
+            return self.items[n].getHtml(False, self.getCfgGui())
+
+    def OnDrawSeparator(self, dc, rect, n):
+        if self.items[n].sceneText:
+            cfgGui = self.getCfgGui()
+            # if this is an annotated scene, set background
+            if self.items[n].noteText:
+                dc.SetPen(wx.Pen(cfgGui.navAnnotatedBgColor))
+                dc.SetBrush(wx.Brush(cfgGui.navAnnotatedBgColor))
+                dc.DrawRectangle(rect[0], rect[1], rect[2], rect[3])
+            dc.SetPen(cfgGui.tabBorderPen)
+            dc.DrawLine(rect[0], rect[1], rect[0]+rect[2], rect[1])
+
+    # Call when an item is clicked.
+    def getClickedLineNo(self):
+        newIndex = self.GetSelection()
+        self.selectItemByIndex(newIndex, False)
+        self.SetSelection(-1)
+        return self.items[self.selectedIndex].lineNo
 
 # custom status control
 class MyStatus(wx.Window):

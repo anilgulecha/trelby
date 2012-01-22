@@ -906,6 +906,9 @@ class ConfigGlobal:
             Command("ToggleShowFormatting", "Toggle 'Show formatting'"
                     " display.", isMenu = True),
 
+            Command("ToggleShowNavigator", "Show/hide the 'Scene Navigator' panel.",
+                    isMenu = True),
+
             Command("ViewModeDraft", "Change view mode to draft.",
                     isMenu = True),
 
@@ -945,6 +948,9 @@ class ConfigGlobal:
 
         # interval in seconds between automatic pagination (0 = disabled)
         v.addInt("paginateInterval", 1, "PaginateInterval", 0, 10)
+
+        # font size in scene navigator.
+        v.addInt("navFontSize", 1, "NavFontSize", 0, 3)
 
         # whether to check script for errors before export / print
         v.addBool("checkOnExport", True, "CheckScriptForErrors")
@@ -1011,6 +1017,11 @@ class ConfigGlobal:
         v.addColor("tabBarBg", 221, 217, 215, "TabBarBG",
                    "Tab bar background")
         v.addColor("tabNonActiveBg", 234, 232, 233, "TabNonActiveBg", "Tab, non-active")
+        v.addColor("navSceneText", 0, 0, 0, "NavSceneText", "Navigator scene text")
+        v.addColor("navSceneSelectedText", 0, 0, 128, "NavSceneSelectedText", "Navigator scene text (when selected)")
+        v.addColor("navNoteText", 128, 128, 0, "NavNoteText", "Navigator note text")
+        v.addColor("navActionText", 128, 128, 128, "NavActionText", "Navigator action text")
+        v.addColor("navAnnotatedBg", 255, 237, 223, "NavAnnotatedBg", "Navigator annotated scene background")
 
         for t in getTIs():
             v.addColor("text%s" % t.name, 0, 0, 0, "Text%sFG" % t.name,
@@ -1281,6 +1292,8 @@ class ConfigGui:
 
         self.tabNonActiveBgBrush = wx.Brush(self.tabNonActiveBgColor)
         self.tabNonActiveBgPen = wx.Pen(self.tabNonActiveBgColor)
+
+        self.navFontSize = cfgGl.navFontSize
 
         # a 4-item list of FontInfo objects, indexed by the two lowest
         # bits of pml.TextOp.flags.

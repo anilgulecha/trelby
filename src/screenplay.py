@@ -25,6 +25,7 @@ import config
 import error
 import headers
 import locations
+import misc
 import mypager
 import pdf
 import pml
@@ -560,6 +561,101 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
                 curLine += "\n"
 
         return eleList
+
+    # Returns list of NavigatorItem objects for use in scene navigator.
+    def getNavigatorElements(self):
+        ls = self.lines
+        navList = []
+        curLine = ""
+        line_no = 0
+
+        # keep track of scene number and length
+        scene_no = 1
+        scene_line_nos = []
+        scene_indexes = []
+
+        #tracks the first line multiple line elements
+        firstline = -1
+        lineCount = len(ls)
+        line_no = 0
+
+        while line_no < lineCount:
+
+            line = ls[line_no]
+            if not(line.lt == NOTE or line.lt == SCENE or line.lt == ACTION):
+                line_no += 1
+                continue
+
+            lineText = line.text
+            if self.cfg.getType(line.lt).export.isCaps:
+                    lineText = util.upper(lineText)
+            curLine += lineText
+
+            lnIncremented = False
+
+            if line.lb == LB_LAST:
+                if line.lt == SCENE:
+                    # Create a new item for scenes.
+                    appendItem = navList.append(misc.NavigatorItem(
+                        line_no, scene_no, sceneText = curLine))
+                    scene_no += 1
+                    scene_line_nos.append(line_no)
+                    scene_indexes.append(len(navList) - 1)
+
+                else:
+                    # NOTE or ACTION
+                    # handle first line in multiline elements.
+                    # if note immediately after scene, add it to that.
+                    if firstline == -1:
+                        ni_line = line_no
+                    else:
+                        ni_line = firstline
+
+                    # Note/action after scene line.
+                    if len(navList)>0 and navList[-1].lineNo == ni_line-1:
+                        if line.lt == NOTE:
+                            navList[-1].noteText = curLine
+                        else: # ACTION
+                            navList[-1].actionText = curLine.split(".")[0] + "..."
+
+                    # Note elsewhere
+                    elif line.lt == NOTE:
+                        navList.append(misc.NavigatorItem(
+                            ni_line, noteText = curLine))
+
+                        # Skip ahead to next Note/Scene
+                        line_no += 1
+                        while line_no < lineCount and (\
+                            ls[line_no].lt != NOTE and ls[line_no].lt != SCENE):
+                                line_no +=1
+                        lnIncremented = True
+
+                if not lnIncremented:
+                    line_no += 1
+                firstline = -1
+                curLine = ""
+
+            elif line.lb == LB_SPACE:
+                if firstline == -1:
+                    firstline = line_no
+                curLine += " "
+                line_no += 1
+
+            elif line.lb == LB_FORCED:
+                if firstline == -1:
+                    firstline = line_no
+                curLine += "<br>"
+                line_no += 1
+
+        # update length of scenes.
+        #  add final line number for last scene length.
+        #  -1 so you don't count the scene line itself.
+        scene_line_nos.append(line_no)
+        for i  in xrange(len(scene_indexes)):
+            navList[scene_indexes[i]].sceneLen = \
+                scene_line_nos[i+1] - scene_line_nos[i] - 1
+
+        return navList
 
     # Generate a Final Draft XML file and return as string.
     def generateFDX(self):

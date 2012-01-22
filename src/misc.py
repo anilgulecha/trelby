@@ -11,19 +11,24 @@ import wx
 TAB_BAR_HEIGHT = 24
 
 def init(doWX = True):
-    global isWindows, isUnix, unicodeFS, wxIsUnicode, doDblBuf, \
+    global isWindows, isUnix, isMac, unicodeFS, wxIsUnicode, doDblBuf, \
            progPath, confPath, tmpPrefix, version
 
     # prefix used for temp files
     tmpPrefix = "trelby-tmp-"
 
-    version = "2.0-dev"
+    version = "2.0"
 
     isWindows = False
     isUnix = False
+    isMac = False
 
     if wx.Platform == "__WXMSW__":
         isWindows = True
+    if wx.Platform == '__WXMAC__':
+        isMac = True
+        isUnix = True
+        # ^^ just in case, since most things work fine already
     else:
         isUnix = True
 
@@ -44,7 +49,10 @@ def init(doWX = True):
         progPath = "."
         confPath = ".trelby"
     else:
-        if isUnix:
+        if isMac:
+            progPath = "/Applications/Trelby" # just don't move it :)
+            confPath = os.environ["HOME"] + "/Library/Application Support/Trelby"
+        elif isUnix:
             progPath = "/opt/trelby"
             confPath = os.environ["HOME"] + "/.trelby"
         else:

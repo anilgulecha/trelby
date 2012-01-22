@@ -1277,7 +1277,9 @@ class ConfigGui:
             # config file, and some wxWidgets ports crash hard when trying
             # to create a font from an empty string, so we must guard
             # against that.
-            if s:
+            if s and not misc.isMac:
+                # Because most Mac users are too stupid to be evil.
+                # Myself included, which is why I can't find the bug in here.
                 nfi = wx.NativeFontInfo()
                 nfi.FromString(s)
                 nfi.SetEncoding(wx.FONTENCODING_ISO8859_1)

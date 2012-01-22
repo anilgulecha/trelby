@@ -1573,7 +1573,7 @@ class MyCtrl(wx.Control):
 class MyFrame(wx.Frame):
 
     def __init__(self, parent, id, title):
-        wx.Frame.__init__(self, parent, id, title, name = "Trelby")
+        wx.Frame.__init__(self, parent, id, title, name = "Trelby", style=wx.DEFAULT_FRAME_STYLE)
 
         if misc.isUnix:
             # automatically reaps zombies
@@ -1581,18 +1581,23 @@ class MyFrame(wx.Frame):
 
         self.clipboard = None
         self.showFormatting = False
-
+###
         self.SetSizeHints(gd.cvars.getMin("width"),
                           gd.cvars.getMin("height"))
 
-        self.MoveXY(gd.posX, gd.posY)
+        if misc.isMac:
+            self.MoveXY(50, 50)
+            # else placed way at top, with no controls
+        else:
+            self.MoveXY(gd.posX, gd.posY)
+        
         self.SetSize(wx.Size(gd.width, gd.height))
-
+###
         util.removeTempFiles(misc.tmpPrefix)
 
         self.mySetIcons()
         self.allocIds()
-
+###
         fileMenu = wx.Menu()
         fileMenu.Append(ID_FILE_NEW, "&New\tCTRL-N")
         fileMenu.Append(ID_FILE_OPEN, "&Open...\tCTRL-O")
@@ -1616,7 +1621,7 @@ class MyFrame(wx.Frame):
         tmp.AppendSeparator()
         tmp.Append(ID_SETTINGS_SC_DICT, "&Spell checker dictionary...")
         settingsMenu = tmp
-
+###
         fileMenu.AppendMenu(ID_FILE_SETTINGS, "Se&ttings", tmp)
 
         fileMenu.AppendSeparator()
@@ -1890,14 +1895,16 @@ class MyFrame(wx.Frame):
         self.panel = self.createNewPanel()
 
     def mySetIcons(self):
-        wx.Image_AddHandler(wx.PNGHandler())
+        if not misc.isMac: wx.Image_AddHandler(wx.PNGHandler())
+        # Mac bug?
 
         ib = wx.IconBundle()
-
         for sz in ("16", "32", "64"):
-            ib.AddIcon(wx.IconFromBitmap(misc.getBitmap("resources/icon%s.png" % sz)))
+            if not misc.isMac: ib.AddIcon(wx.IconFromBitmap(misc.getBitmap("resources/icon%s.png" % sz)))
+            # also Mac bug?
 
         self.SetIcons(ib)
+
 
     def allocIds(self):
         names = [
@@ -2445,7 +2452,7 @@ class MyApp(wx.App):
 
     def OnInit(self):
         global cfgGl, mainFrame, gd
-
+#
         if (wx.MAJOR_VERSION != 2) or (wx.MINOR_VERSION != 8):
             wx.MessageBox("You seem to have an invalid version\n"
                           "(%s) of wxWidgets installed. This\n"
@@ -2455,7 +2462,7 @@ class MyApp(wx.App):
 
         misc.init()
         util.init()
-
+#
         gd = GlobalData()
 
         if misc.isWindows:
@@ -2477,7 +2484,7 @@ class MyApp(wx.App):
         wx.SetDefaultPyEncoding("ISO-8859-1")
 
         os.chdir(misc.progPath)
-
+#
         cfgGl = config.ConfigGlobal()
         cfgGl.setDefaults()
 
@@ -2497,7 +2504,7 @@ class MyApp(wx.App):
         # misc.scriptDir is updated every time the user opens something in
         # a different directory.
         misc.scriptDir = cfgGl.scriptDir
-
+#
         if util.fileExists(gd.stateFilename):
             s = util.loadFile(gd.stateFilename, None)
 
@@ -2511,18 +2518,20 @@ class MyApp(wx.App):
 
             if s:
                 gd.scDict.load(s)
-
+##
+        
         mainFrame = MyFrame(None, -1, "Trelby")
+        
         mainFrame.init()
 
         for arg in opts.filenames:
             mainFrame.openScript(arg)
-
+###
         mainFrame.Show(True)
 
         # windows needs this for some reason
         mainFrame.panel.ctrl.SetFocus()
-
+###
         self.SetTopWindow(mainFrame)
 
         mainFrame.checkFonts()

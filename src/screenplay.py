@@ -39,7 +39,10 @@ import re
 import sys
 import time
 
-from lxml import etree
+#import misc
+#if not misc.isMac:
+    # couldn't run, so deleted (sorry)
+#    from lxml import etree
 
 # screenplay
 class Screenplay:

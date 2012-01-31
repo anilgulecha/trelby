@@ -30,6 +30,7 @@ import pdf
 import pml
 import spellcheck
 import titles
+import undo
 import util
 
 import codecs
@@ -87,6 +88,39 @@ class Screenplay:
         # load/save/creation.
         self.hasChanged = False
 
+        # create undo buffer
+        ui = undo.UndoItem(self.lines, self.line, self.column)
+        self.undoBuffer = undo.UndoBuffer(self.cfgGl.undoBufferSize, ui)
+
+    # Undo action in screenplay
+    def undo(self):
+        currentState = undo.UndoItem(self.lines, self.line, self.column)
+        undoItem = self.undoBuffer.undo(currentState)
+        if undoItem:
+            self.lines = undoItem.lines
+            self.line = undoItem.line
+            self.column = undoItem.column
+            print "line column is ", self.line, self.column, " len lines ", len(self.lines)
+            return True
+        else:
+            return False
+
+    # Redo action in screenplay
+    def redo(self):
+        currentState = undo.UndoItem(self.lines, self.line, self.column)
+        redoItem = self.undoBuffer.redo(currentState)
+        if redoItem:
+            self.lines = redoItem.lines
+            self.line = redoItem.line
+            self.column = redoItem.column
+            return True
+        else:
+            return False
+
+    # Function to save current state in undo buffer.
+    def addUndoPoint(self):
+        self.undoBuffer.add(undo.UndoItem(self.lines, self.line, self.column))
+
     def isModified(self):
         if not self.hasChanged:
             return False
@@ -115,6 +149,17 @@ class Screenplay:
             return tcfg.beforeSpacing
         else:
             return tcfg.intraSpacing
+
+    # create and return a deepcopy of lines.
+    # If lines isn't provided, use self.lines
+    def getDeepcopyLines(self, lines=None):
+        newLines = []
+        if not lines:
+            lines = self.lines
+        for i in xrange(len(lines)):
+            ln = lines[i]
+            newLines.append(Line(ln.lb, ln.lt, ln.text))
+        return newLines
 
     # this is ~8x faster than the generic deepcopy, which makes a
     # noticeable difference at least on an Athlon 1.3GHz (0.06s versus
@@ -347,6 +392,7 @@ class Screenplay:
         sp.paginate()
         sp.titles.sort()
         sp.locations.refresh(sp.getSceneNames())
+        sp.addUndoPoint()
 
         msgs = []
 
@@ -2820,6 +2866,12 @@ class Line:
     def __str__(self):
         return config.lb2char(self.lb) + config.lt2char(self.lt)\
                + self.text
+
+    def __hash__(self):
+        return self.__str__().__hash__()
+
+    def __eq__(self, line2):
+        return self.__str__() == line2.__str__()
 
 # used to keep track of selected area. this marks one of the end-points,
 # while the other one is the current position.

@@ -41,6 +41,84 @@ import time
 
 from lxml import etree
 
+# A class to store items saved for undo/redo.
+class UndoItem:
+    # a class that represents text, line number, and column.
+    def __init__(self, lines, line, column):
+        self.lines = lines
+        self.line = line
+        self.column = column
+
+    # check if our lines and item's lines are the same
+    def sameTextAs(self, item):
+        i = len(item.lines)
+        if i != len(self.lines):
+            return False
+        while i >= 0:
+            i -= 1
+            if item.lines[i].text != self.lines[i].text or\
+                item.lines[i].lt != self.lines[i].lt or\
+                item.lines[i].lb != self.lines[i].lb:
+                return False
+        return True
+
+# A class to handle undo/redo stacks
+class UndoBuffer:
+    def __init__(self, size):
+        # setup undo/redo stacks.
+        # the top element of undo stack signifies the program state.
+        self.undodata = []
+        self.redodata = []
+        self.size = size
+
+    # add a copy of lines into the buffer.
+    def add(self, item):
+        # return if no buffer or, item same as last added item?
+        if self.size == 0 or (self.undodata and item == self.undodata[-1]):
+            return
+
+        # if full, delete oldest item
+        if len(self.undodata) == self.size:
+            del self.undodata[0]
+        self.undodata.append(item)
+        self.redodata = []
+
+    # return undo item, or None if cannot undo
+    # currentItem is the active object.
+    #  - this may or may not have changed from the top of undo stack.
+    def undo(self, currentItem):
+        activeItemSame = self.undodata[-1].sameTextAs(currentItem)
+        if not self.undodata or \
+            (len(self.undodata) == 1 and activeItemSame):
+            return None
+
+        if activeItemSame:
+            # if same, move item from undo stack into redo stack
+            self.redodata.append(self.undodata.pop())
+        else:
+            # empty redo stack and add current
+            self.redodata = [currentItem]
+
+        if self.undodata:
+            return self.undodata[-1]
+        else:
+            return None
+
+    # return redo item, or None if cannot redo
+    # currentItem is the active object.
+    def redo(self, currentItem):
+        if not self.redodata:
+            return None
+
+        if self.undodata and self.undodata[-1].sameTextAs(currentItem):
+            # In the middle of a undo/redo
+            self.undodata.append(self.redodata.pop())
+            return self.undodata[-1]
+        else:
+            # So the changes have gone in a different direction!
+            self.redodata = []
+            return None
+
 # screenplay
 class Screenplay:
     def __init__(self, cfgGl):
@@ -87,6 +165,38 @@ class Screenplay:
         # load/save/creation.
         self.hasChanged = False
 
+        # create undo buffer
+        self.undoBuffer = UndoBuffer(self.cfgGl.undoBufferSize)
+
+    # Undo action in screenplay
+    def undo(self):
+        currentState = UndoItem(self.getDeepcopyLines(), self.line, self.column)
+        undoItem = self.undoBuffer.undo(currentState)
+        if undoItem:
+            self.lines = self.getDeepcopyLines(undoItem.lines)
+            self.line = undoItem.line
+            self.column = undoItem.column
+            return True
+        else:
+            return False
+
+    # Redo action in screenplay
+    def redo(self):
+        currentState = UndoItem(self.getDeepcopyLines(), self.line, self.column)
+        redoItem = self.undoBuffer.redo(currentState)
+        if redoItem:
+            self.lines = self.getDeepcopyLines(redoItem.lines)
+            self.line = redoItem.line
+            self.column = redoItem.column
+            return True
+        else:
+            return False
+
+    # Function to save current state in undo buffer.
+    def addUndoPoint(self):
+        allLines = self.getDeepcopyLines()
+        self.undoBuffer.add(UndoItem(allLines, self.line, self.column))
+
     def isModified(self):
         if not self.hasChanged:
             return False
@@ -111,6 +221,17 @@ class Screenplay:
         else:
             return tcfg.intraSpacing
 
+    # create and return a deepcopy of lines.
+    # If lines isn't provided, use self.lines
+    def getDeepcopyLines(self, lines=None):
+        newLines = []
+        if not lines:
+            lines = self.lines
+        for i in xrange(len(lines)):
+            ln = lines[i]
+            newLines.append(Line(ln.lb, ln.lt, ln.text))
+        return newLines
+
     # this is ~8x faster than the generic deepcopy, which makes a
     # noticeable difference at least on an Athlon 1.3GHz (0.06s versus
     # 0.445s)
@@ -124,13 +245,7 @@ class Screenplay:
         sp.titles = copy.deepcopy(self.titles)
         sp.scDict = copy.deepcopy(self.scDict)
 
-        # remove the dummy empty line
-        sp.lines = []
-        l = sp.lines
-
-        for i in xrange(len(self.lines)):
-            ln = self.lines[i]
-            l.append(Line(ln.lb, ln.lt, ln.text))
+        sp.lines = self.getDeepcopyLines()
 
         # "open PDF on current page" breaks on scripts we're removing
         # notes from before printing if we don't copy these
@@ -342,6 +457,7 @@ class Screenplay:
         sp.paginate()
         sp.titles.sort()
         sp.locations.refresh(sp.getSceneNames())
+        sp.addUndoPoint()
 
         msgs = []
 

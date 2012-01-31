@@ -1087,6 +1087,9 @@ class MiscPanel(wx.Panel):
         self.addSpin("paginate", "Auto-paginate interval in seconds:\n"
                      " (0 = disable)", self, vsizer, "paginateInterval")
 
+        self.addSpin("undoBufferSize", "Remember this many undo/redo items.\n"
+                     " (0 = disable)", self, vsizer, "undoBufferSize")
+
         self.addSpin("confDel", "Confirm deletes >= this many lines\n"
                      " (0 = disable):", self, vsizer, "confirmDeletes")
 
@@ -1135,6 +1138,7 @@ class MiscPanel(wx.Panel):
         self.cfg.recenterOnScroll = self.recenterOnScroll.GetValue()
         self.cfg.paginateInterval = util.getSpinValue(self.paginateEntry)
         self.cfg.confirmDeletes = util.getSpinValue(self.confDelEntry)
+        self.cfg.undoBufferSize = util.getSpinValue(self.undoBufferSizeEntry)
         self.cfg.mouseWheelLines = util.getSpinValue(self.wheelScrollEntry)
         self.cfg.splashTime = util.getSpinValue(self.splashTimeEntry)
 
@@ -1187,6 +1191,7 @@ class MiscPanel(wx.Panel):
         self.recenterOnScroll.SetValue(self.cfg.recenterOnScroll)
         self.paginateEntry.SetValue(self.cfg.paginateInterval)
         self.confDelEntry.SetValue(self.cfg.confirmDeletes)
+        self.undoBufferSizeEntry.SetValue(self.cfg.undoBufferSize)
         self.wheelScrollEntry.SetValue(self.cfg.mouseWheelLines)
         self.splashTimeEntry.SetValue(self.cfg.splashTime)
 

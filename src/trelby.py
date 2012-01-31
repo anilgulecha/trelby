@@ -803,13 +803,6 @@ class MyCtrl(wx.Control):
         if not marked:
             return None
 
-        if not copyToClip and cfgGl.confirmDeletes and (
-            (marked[1] - marked[0] + 1) >= cfgGl.confirmDeletes):
-            if wx.MessageBox("Are you sure you want to delete\n"
-                             "the selected text?", "Confirm",
-                             wx.YES_NO | wx.NO_DEFAULT, self) == wx.NO:
-                return
-
         cd = self.sp.getSelectedAsCD(doDelete)
 
         if copyToClip:

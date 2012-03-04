@@ -11,7 +11,7 @@ import wx
 TAB_BAR_HEIGHT = 24
 
 def init(doWX = True):
-    global isWindows, isUnix, unicodeFS, wxIsUnicode, doDblBuf, \
+    global isWindows, isUnix, isLinux, unicodeFS, wxIsUnicode, doDblBuf, \
            progPath, confPath, tmpPrefix, version
 
     # prefix used for temp files
@@ -21,11 +21,14 @@ def init(doWX = True):
 
     isWindows = False
     isUnix = False
+    isLinux = False
 
     if wx.Platform == "__WXMSW__":
         isWindows = True
     else:
         isUnix = True
+        if wx.Platform == "__WXGTK__":
+            isLinux = True
 
     # are we using a Unicode build of wxWidgets
     wxIsUnicode = "unicode" in wx.PlatformInfo

@@ -201,6 +201,7 @@ class MyCtrl(wx.Control):
         wx.Control.__init__(self, parent, id, style = style)
 
         self.panel = parent
+        self.selectedCopied = False
 
         wx.EVT_SIZE(self, self.OnSize)
         wx.EVT_PAINT(self, self.OnPaint)
@@ -574,6 +575,19 @@ class MyCtrl(wx.Control):
 
         if not cd or ((len(cd.lines) == 1) and (len(cd.lines[0].text) < 2)):
             self.sp.clearMark()
+        else:
+            # something was selected - copy to unix primary (middleclick) buffer.
+            if misc.isLinux and wx.TheClipboard.Open():
+                tmpSp = screenplay.Screenplay(cfgGl)
+                tmpSp.lines = cd.lines
+                tmpSp.paginate()
+                s = tmpSp.generateText(False)
+
+                wx.TheClipboard.UsePrimarySelection(True)
+                wx.TheClipboard.Clear()
+                wx.TheClipboard.AddData(wx.TextDataObject(s))
+                wx.TheClipboard.Flush()
+                wx.TheClipboard.Close()
 
     def OnMotion(self, event):
         if event.LeftIsDown():
@@ -792,6 +806,8 @@ class MyCtrl(wx.Control):
         if not marked:
             return None
 
+        self.selectedCopied = True
+
         if not copyToClip and cfgGl.confirmDeletes and (
             (marked[1] - marked[0] + 1) >= cfgGl.confirmDeletes):
             if wx.MessageBox("Are you sure you want to delete\n"
@@ -816,6 +832,8 @@ class MyCtrl(wx.Control):
 
         if not cd:
             return
+
+        self.selectedCopied = True
 
         tmpSp = screenplay.Screenplay(cfgGl)
         tmpSp.lines = cd.lines
@@ -1313,6 +1331,12 @@ class MyCtrl(wx.Control):
         #      (kc, ev.ControlDown(), ev.AltDown(), ev.ShiftDown())
 
         cs = screenplay.CommandState()
+
+        if self.selectedCopied:
+            # clipboard action on selection done - clear the mark
+            self.sp.clearMark()
+            self.selectedCopied = False
+
         cs.mark = bool(ev.ShiftDown())
         scrollDirection = config.SCROLL_CENTER
 
@@ -1694,8 +1718,8 @@ class MyFrame(wx.Frame):
         tmp.Append(ID_EDIT_COPY_TO_CB, "&Unformatted")
         tmp.Append(ID_EDIT_COPY_TO_CB_FMT, "&Formatted")
 
-        editMenu.AppendMenu(ID_EDIT_COPY_SYSTEM, "C&opy (system)", tmp)
-        editMenu.Append(ID_EDIT_PASTE_FROM_CB, "P&aste (system)")
+        editMenu.AppendMenu(ID_EDIT_COPY_SYSTEM, "C&opy (external)", tmp)
+        editMenu.Append(ID_EDIT_PASTE_FROM_CB, "P&aste (external)")
         editMenu.AppendSeparator()
         editMenu.Append(ID_EDIT_SELECT_SCENE, "&Select scene")
         editMenu.Append(ID_EDIT_SELECT_ALL, "Select a&ll")

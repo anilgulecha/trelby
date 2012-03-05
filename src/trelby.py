@@ -1281,6 +1281,8 @@ class MyCtrl(wx.Control):
         self.sp.toPrevTypeTabCmd(cs)
 
     def cmdSpeedTest(self, cs):
+        import undo
+
         def testReformatAll():
             self.sp.reformatAll()
 
@@ -1297,6 +1299,13 @@ class MyCtrl(wx.Control):
 
         def testDeepcopy():
             copy.deepcopy(self.sp)
+
+        def testScreenplayDiff():
+            # compare screenplay lines with themself.
+            undo.mySequenceMatcher(self.sp.lines, self.sp.lines)
+
+        def testScreenplayDiffFast():
+            undo.mySequenceMatcher(self.sp.lines, self.sp.lines, True, len(self.sp.lines)-2)
 
         # contains (name, func) tuples
         tests = []

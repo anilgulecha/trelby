@@ -61,36 +61,43 @@ class Ops:
 
 # a single operation
 class Op:
-    funcs = [
-        "abort",
-        "addChar",
-        "deleteBackward",
-        "deleteForward",
-        "insertForcedLineBreak",
-        "moveDown",
-        "moveEnd",
-        "moveLeft",
-        "moveLineEnd",
-        "moveLineStart",
-        "moveRight",
-        "moveSceneDown",
-        "moveSceneUp",
-        "moveStart",
-        "moveUp",
-        "selectScene",
-        "setMark",
-        "splitElement",
-        "tab",
-        "toAction",
-        "toCharacter",
-        "toDialogue",
-        "toNote",
-        "toParen",
-        "toPrevTypeTab",
-        "toScene",
-        "toShot",
-        "toTransition",
-        ]
+
+    # Dictionary of functions, and if undo is required after them.
+    _funcs = {
+        "abort" : False,
+        "addChar" : False,
+        "deleteBackward" : False,
+        "deleteForward" : False,
+        "insertForcedLineBreak" : True,
+        "moveDown" : False,
+        "moveEnd" : False,
+        "moveLeft" : False,
+        "moveLineEnd" : False,
+        "moveLineStart" : False,
+        "moveRight" : False,
+        "moveSceneDown" : False,
+        "moveSceneUp" : False,
+        "moveStart" : False,
+        "moveUp" : False,
+        "selectScene" : False,
+        "setMark" : False,
+        "splitElement" : True,
+        "tab" : True,
+        "toAction" : True,
+        "toCharacter" : True,
+        "toDialogue" : True,
+        "toNote" : True,
+        "toParen" : True,
+        "toPrevTypeTab" : True,
+        "toScene" : True,
+        "toShot" : True,
+        "toTransition" : True,
+        "toActBreak" : True,
+        "undo" : False,
+        "redo" : False,
+        }
+
+    funcs = _funcs.keys()
 
     # FIXME: support other commands like getSelectedAsCD etc.
 
@@ -172,7 +179,10 @@ def runRandomOps():
 
         for i in xrange(rounds):
             if i != 0:
-                ops.add(Op.getRandom())
+                o = Op.getRandom()
+                ops.add(o)
+                if Op._funcs[o.name]:
+                    ops.add(Op("undo"))
 
             try:
                 ops.run()

@@ -334,3 +334,27 @@ class UndoBuffer:
             self.redodata = []
         return True
 
+    # return the number of Line objects that the UndoBuffer holds.
+    # used for debugging, and approximating additional memory allocated.
+    def getLinesCount(self):
+        lc = 0
+
+        # lines in undo stack.
+        for item in self.undodata:
+            for op in item.operations:
+                if op.removed:
+                    lc += len(op.removed)
+                if op.inserted:
+                    lc += len(op.inserted)
+
+        # lines in redo stack.
+        for item in self.redodata:
+            for op in item.operations:
+                if op.removed:
+                    lc += len(op.removed)
+                if op.inserted:
+                    lc += len(op.inserted)
+
+        # lines in our top.
+        lc += len(self.top.lines)
+        return lc

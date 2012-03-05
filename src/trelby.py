@@ -1272,6 +1272,8 @@ class MyCtrl(wx.Control):
         self.sp.toPrevTypeTabCmd(cs)
 
     def cmdSpeedTest(self, cs):
+        import undo
+
         def testReformatAll():
             self.sp.reformatAll()
 
@@ -1288,6 +1290,13 @@ class MyCtrl(wx.Control):
 
         def testDeepcopy():
             copy.deepcopy(self.sp)
+
+        def testScreenplayDiff():
+            # compare screenplay lines with themself.
+            undo.mySequenceMatcher(self.sp.lines, self.sp.lines)
+
+        def testScreenplayDiffFast():
+            undo.mySequenceMatcher(self.sp.lines, self.sp.lines, True, len(self.sp.lines)-2)
 
         # contains (name, func) tuples
         tests = []
@@ -1318,7 +1327,10 @@ class MyCtrl(wx.Control):
         self.sp.markChanged(False)
 
     def cmdTest(self, cs):
-        pass
+        print "Lines in screenplay:", len(self.sp.lines)
+        ub = self.sp.undoBuffer
+        print "Current size/capacity of undo: %d/%d" % (len(ub.undodata), ub.size)
+        print "Lines in undobuffer:", ub.getLinesCount()
 
     def OnKeyChar(self, ev):
         kc = ev.GetKeyCode()

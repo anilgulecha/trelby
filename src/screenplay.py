@@ -2826,6 +2826,12 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
     def toNoteCmd(self, cs):
         self.convertTypeTo(NOTE)
 
+    def undoCmd(self, cs):
+        self.undo()
+
+    def redoCmd(self, cs):
+        self.redo()
+
     # check script for internal consistency. raises an AssertionError on
     # errors. ONLY MEANT TO BE USED IN TEST CODE.
     def _validate(self):

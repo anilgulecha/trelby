@@ -756,6 +756,10 @@ class ConfigGlobal:
                     [util.Key(wx.WXK_F11).toInt()], isFixed = True,
                     isMenu = True),
 
+            Command("InsertNbsp", "Insert non-breaking space.",
+                    [util.Key(wx.WXK_SPACE, shift = True, ctrl = True).toInt()],
+                    isFixed = True, isMenu = True),
+
             Command("GotoScene", "Goto to a given scene.",
                     [util.Key(ord("G"), alt = True).toInt()], isFixed = True,
                     isMenu = True),

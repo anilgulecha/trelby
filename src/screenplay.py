@@ -2130,6 +2130,16 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
         del2 = -1
 
         # delete selected text from the lines
+        firstSelDeleted = False
+        lastSelDeleted = False
+        firstDel = (marked[0] == 0)
+        lastDel = (marked[1] == len(self.lines) - 1)
+
+        startCol = 0
+
+        # delete selected text from the lines
+        # Also note state according to which lines are being deleted
+        # so we can set cursor later.
         for i in xrange(marked[0], marked[1] + 1):
             c1, c2 = self.getMarkedColumns(i, marked)
 
@@ -2137,7 +2147,12 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
             ln.text = ln.text[0:c1] + ln.text[c2 + 1:]
 
             if i == marked[0]:
-                endCol = c1
+                startCol = c1
+                if len(ln.text) == 0:
+                    firstSelDeleted = True
+
+            if i == marked[1] and len(ln.text) == 0:
+                lastSelDeleted = True
 
             # if we removed all text, mark this line to be deleted
             if len(ln.text) == 0:
@@ -2202,7 +2217,29 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
             ls.append(Line(LB_LAST, SCENE))
 
         self.line = min(marked[0], len(ls) - 1)
-        self.column = min(endCol, len(ls[self.line].text))
+
+        # Depending on if the first and the last lines were fully deleted.
+        # Line has alredy been set to marked[0], or marked[0]-1 above.
+        # Set column accordingly (c1 or c2).
+        #
+        #     First line | Last Line | Column
+        #    --------------------------------------
+        #         yes    |   yes/no  |  Depends
+        #         no     |   yes/no  |  startCol
+        #
+        # Depends - if the very first and/or last line are deleted, set
+        #           column to 0 or end of line respectively.
+
+        if firstSelDeleted:
+            if lastSelDeleted:
+                if firstDel or not (firstDel or lastDel):
+                    self.column = 0
+                else:
+                    self.column = len(ls[self.line].text)
+            else:
+                self.column = 0
+        else:
+            self.column = startCol
 
         self.rewrapElem()
         self.markChanged()
@@ -2715,6 +2752,8 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
 
             if self.line > 0:
                 self.line -= 1
+            else:
+                self.moveLineStartCmd(cs)
 
         else:
             self.acSel -= 1
@@ -2730,6 +2769,8 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
 
             if self.line < (len(self.lines) - 1):
                 self.line += 1
+            else:
+                self.moveLineEndCmd(cs)
 
         else:
             self.acSel = (self.acSel + 1) % len(self.acItems)

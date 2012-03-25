@@ -1071,6 +1071,11 @@ class MiscPanel(wx.Panel):
         wx.EVT_CHECKBOX(self, self.honorSavedPos.GetId(), self.OnMisc)
         vsizer.Add(self.honorSavedPos, 0, wx.BOTTOM, pad)
 
+        self.useBlockCursor = wx.CheckBox(self, -1,
+            "Use a block cursor")
+        wx.EVT_CHECKBOX(self, self.useBlockCursor.GetId(), self.OnMisc)
+        vsizer.Add(self.useBlockCursor, 0, wx.BOTTOM, pad)
+
         self.recenterOnScroll = wx.CheckBox(self, -1,
             "Recenter screen on scrolling")
         wx.EVT_CHECKBOX(self, self.recenterOnScroll.GetId(), self.OnMisc)
@@ -1132,6 +1137,7 @@ class MiscPanel(wx.Panel):
         self.cfg.capitalizeI = self.autoCapI.GetValue()
         self.cfg.honorSavedPos = self.honorSavedPos.GetValue()
         self.cfg.checkOnExport = self.checkErrorsCb.GetValue()
+        self.cfg.useBlockCursor = self.useBlockCursor.GetValue()
         self.cfg.recenterOnScroll = self.recenterOnScroll.GetValue()
         self.cfg.paginateInterval = util.getSpinValue(self.paginateEntry)
         self.cfg.confirmDeletes = util.getSpinValue(self.confDelEntry)
@@ -1184,6 +1190,7 @@ class MiscPanel(wx.Panel):
         self.autoCapI.SetValue(self.cfg.capitalizeI)
         self.honorSavedPos.SetValue(self.cfg.honorSavedPos)
         self.checkErrorsCb.SetValue(self.cfg.checkOnExport)
+        self.useBlockCursor.SetValue(self.cfg.useBlockCursor)
         self.recenterOnScroll.SetValue(self.cfg.recenterOnScroll)
         self.paginateEntry.SetValue(self.cfg.paginateInterval)
         self.confDelEntry.SetValue(self.cfg.confirmDeletes)

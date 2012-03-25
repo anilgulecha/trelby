@@ -988,6 +988,9 @@ class ConfigGlobal:
         # whether to open scripts on their last saved position
         v.addBool("honorSavedPos", True, "OpenScriptOnSavedPos")
 
+        # whether to use a block cursor
+        v.addBool("useBlockCursor", False, "UseBlockCursor")
+
         # whether to recenter screen when cursor moves out of it
         v.addBool("recenterOnScroll", False, "RecenterOnScroll")
 
@@ -1023,7 +1026,7 @@ class ConfigGlobal:
         v.addColor("pageShadow", 153, 153, 153, "PageShadow", "Page shadow")
         v.addColor("selected", 200, 200, 200, "Selected", "Selection")
         v.addColor("search", 255, 127, 0, "SearchResult", "Search result")
-        v.addColor("cursor", 135, 135, 253, "Cursor", "Cursor")
+        v.addColor("cursor", 107, 107, 189, "Cursor", "Cursor")
         v.addColor("autoCompFg", 0, 0, 0, "AutoCompletionFG",
                    "Auto-completion foreground")
         v.addColor("autoCompBg", 255, 240, 168, "AutoCompletionBG",

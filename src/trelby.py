@@ -1507,7 +1507,11 @@ class MyCtrl(wx.Control):
                     acFi = fi
                     dc.SetPen(cfgGui.cursorPen)
                     dc.SetBrush(cfgGui.cursorBrush)
-                    dc.DrawRectangle(t.x + self.sp.column * fx, y, fx, fi.fy)
+                    if self.sp.mark or self.sp.cfgGl.useBlockCursor:
+                        width = fx
+                    else:
+                        width = 1 + (fx // 7)
+                    dc.DrawRectangle(t.x + self.sp.column * fx, y, width, fi.fy)
 
                 if i == self.searchLine:
                     dc.SetPen(cfgGui.searchPen)

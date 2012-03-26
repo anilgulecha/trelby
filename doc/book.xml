@@ -257,8 +257,7 @@
 
 		<para>After you've selected the desired text, you can use the
 		cut/copy/paste commands to move text around, delete it, etc. You
-		can also press Del or Backspace to simply delete it. Note that as of
- 		now this is not undoable in any way.</para>
+		can also press Del or Backspace to simply delete it.</para>
 
 		<para>You can unselect the selected text by pressing Esc., or simply
  		clicking the mouse on the screen.</para>
@@ -473,6 +472,17 @@
 	</sect1>
 
 	<sect1>
+
+      <title>Edit/Undo,Redo</title>
+      <para>Undo/redo recent changes to the screenplay text.</para>
+
+      <para>The number of changes maintained in memory is defined in
+      the global settings, in the 'Miscellaneous' section.</para>
+
+    </sect1>
+
+    <sect1>
+
 	  <title>Edit/Cut,Copy,Paste</title>
 
 	  <para>Cut, copy and paste work pretty much the same way as in every

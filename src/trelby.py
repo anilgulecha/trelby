@@ -250,6 +250,7 @@ class MyCtrl(wx.Control):
         self.sp = screenplay.Screenplay(cfgGl)
         self.sp.titles.addDefaults()
         self.sp.headers.addDefaults()
+        self.sp.addUndoPoint()
         self.setFile(None)
         self.refreshCache()
 
@@ -451,6 +452,7 @@ class MyCtrl(wx.Control):
 
     # update GUI elements shared by all scripts, like statusbar etc
     def updateCommon(self):
+        #print "here it is ", self.sp.line, self.sp.column
         cur = cfgGl.getType(self.sp.lines[self.sp.line].lt)
 
         if self.sp.tabMakesNew():
@@ -791,6 +793,16 @@ class MyCtrl(wx.Control):
             self.loadFile(self.fileName)
             self.updateScreen()
 
+    def OnUndo(self):
+        self.sp.undo()
+        self.makeLineVisible(self.sp.line)
+        self.updateScreen()
+
+    def OnRedo(self):
+        self.sp.redo()
+        self.makeLineVisible(self.sp.line)
+        self.updateScreen()
+
     # returns True if something was deleted
     def OnCut(self, doUpdate = True, doDelete = True, copyToClip = True):
         marked = self.sp.getMarkedLines()
@@ -798,8 +810,8 @@ class MyCtrl(wx.Control):
         if not marked:
             return False
 
-        if not copyToClip and cfgGl.confirmDeletes and (
-            (marked[1] - marked[0] + 1) >= cfgGl.confirmDeletes):
+        if not copyToClip and cfgGl.confirmLineDeletes and (
+            (marked[1] - marked[0] + 1) >= cfgGl.confirmLineDeletes):
             if wx.MessageBox("Are you sure you want to delete\n"
                              "the selected text?", "Confirm",
                              wx.YES_NO | wx.NO_DEFAULT, self) == wx.NO:
@@ -1360,11 +1372,22 @@ class MyCtrl(wx.Control):
 
             if cmd:
                 scrollDirection = cmd.scrollDirection
+
+                # any accmulated changes before moving on?
+                if cmd.isMovement:
+                    self.sp.utrack.checkUndo()
+
                 if cmd.isMenu:
                     getattr(mainFrame, "On" + cmd.name)()
-                    return
                 else:
                     getattr(self, "cmd" + cmd.name)(cs)
+
+                if cmd.canUndo:
+                    self.sp.utrack.noCheckUndo()
+
+                if cmd.isMenu:
+                    return
+
             else:
                 ev.Skip()
                 return
@@ -1706,6 +1729,9 @@ class MyFrame(wx.Frame):
         fileMenu.Append(ID_FILE_EXIT, "E&xit\tCTRL-Q")
 
         editMenu = wx.Menu()
+        editMenu.Append(ID_EDIT_UNDO, "&Undo\tCTRL-Z")
+        editMenu.Append(ID_EDIT_REDO, "&Redo\tCTRL-Y")
+        editMenu.AppendSeparator()
         editMenu.Append(ID_EDIT_CUT, "Cu&t\tCTRL-X")
         editMenu.Append(ID_EDIT_COPY, "&Copy\tCTRL-C")
         editMenu.Append(ID_EDIT_PASTE, "&Paste\tCTRL-V")
@@ -1909,6 +1935,8 @@ class MyFrame(wx.Frame):
         wx.EVT_MENU(self, ID_SETTINGS_SAVE_AS, self.OnSaveSettingsAs)
         wx.EVT_MENU(self, ID_SETTINGS_SC_DICT, self.OnSpellCheckerDictionaryDlg)
         wx.EVT_MENU(self, ID_FILE_EXIT, self.OnExit)
+        wx.EVT_MENU(self, ID_EDIT_UNDO, self.OnUndo)
+        wx.EVT_MENU(self, ID_EDIT_REDO, self.OnRedo)
         wx.EVT_MENU(self, ID_EDIT_CUT, self.OnCut)
         wx.EVT_MENU(self, ID_EDIT_COPY, self.OnCopy)
         wx.EVT_MENU(self, ID_EDIT_PASTE, self.OnPaste)
@@ -1990,6 +2018,8 @@ class MyFrame(wx.Frame):
 
     def allocIds(self):
         names = [
+            "ID_EDIT_UNDO",
+            "ID_EDIT_REDO",
             "ID_EDIT_COPY",
             "ID_EDIT_COPY_SYSTEM",
             "ID_EDIT_COPY_TO_CB",
@@ -2320,6 +2350,12 @@ class MyFrame(wx.Frame):
                 gd.confFilename = dlg.GetPath()
 
         dlg.Destroy()
+
+    def OnUndo(self, event = None):
+        self.panel.ctrl.OnUndo()
+
+    def OnRedo(self, event = None):
+        self.panel.ctrl.OnRedo()
 
     def OnCut(self, event = None):
         self.panel.ctrl.OnCut()

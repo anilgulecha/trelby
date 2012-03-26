@@ -400,6 +400,8 @@ class FindDlg(wx.Dialog):
 
             if diff != 0:
                 self.didReplaces = True
+                # create an undo point
+                self.ctrl.sp.utrack.noCheckUndo()
 
             self.ctrl.sp.markChanged()
             self.OnFind(autoFind = autoFind)

@@ -128,6 +128,10 @@ class SpellCheckDlg(wx.Dialog):
 
         self.sc.col += len(self.sc.word) + diff
         self.didReplaces = True
+
+        # create an undo point.
+        self.ctrl.sp.utrack.noCheckUndo()
+
         self.ctrl.sp.markChanged()
         self.gotoNext(False)
 

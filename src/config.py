@@ -195,7 +195,7 @@ class Command:
     cvars = None
 
     def __init__(self, name, desc, defKeys = [], isMovement = False,
-                 isFixed = False, isMenu = False,
+                 isFixed = False, isMenu = False, canUndo = False,
                  scrollDirection = SCROLL_CENTER):
 
         # name, e.g. "MoveLeft"
@@ -216,6 +216,9 @@ class Command:
 
         # is this a menu item
         self.isMenu = isMenu
+
+        # affects undo/redo
+        self.canUndo = canUndo
 
         # which way the command wants to scroll the page
         self.scrollDirection = scrollDirection
@@ -674,33 +677,33 @@ class ConfigGlobal:
 
             Command("ChangeToAction", "Change current element's style to"
                     " action.",
-                    [util.Key(ord("A"), alt = True).toInt()]),
+                    [util.Key(ord("A"), alt = True).toInt()], canUndo = True),
 
             Command("ChangeToCharacter", "Change current element's style to"
                     " character.",
-                    [util.Key(ord("C"), alt = True).toInt()]),
+                    [util.Key(ord("C"), alt = True).toInt()], canUndo = True),
 
             Command("ChangeToDialogue", "Change current element's style to"
                     " dialogue.",
-                    [util.Key(ord("D"), alt = True).toInt()]),
+                    [util.Key(ord("D"), alt = True).toInt()], canUndo = True),
 
             Command("ChangeToNote", "Change current element's style to note.",
-                    [util.Key(ord("N"), alt = True).toInt()]),
+                    [util.Key(ord("N"), alt = True).toInt()], canUndo = True),
 
             Command("ChangeToParenthetical", "Change current element's"
                     " style to parenthetical.",
-                    [util.Key(ord("P"), alt = True).toInt()]),
+                    [util.Key(ord("P"), alt = True).toInt()], canUndo = True),
 
             Command("ChangeToScene", "Change current element's style to"
                     " scene.",
-                    [util.Key(ord("S"), alt = True).toInt()]),
+                    [util.Key(ord("S"), alt = True).toInt()], canUndo = True),
 
             Command("ChangeToShot", "Change current element's style to"
-                    " shot."),
+                    " shot.", canUndo = True),
 
             Command("ChangeToTransition", "Change current element's style to"
                     " transition.",
-                    [util.Key(ord("T"), alt = True).toInt()]),
+                    [util.Key(ord("T"), alt = True).toInt()], canUndo = True),
 
             Command("CharacterMap", "Open the character map.",
                     isMenu = True),
@@ -723,7 +726,7 @@ class ConfigGlobal:
 
             Command("Cut", "Cut selected text to internal clipboard.",
                     [util.Key(24, ctrl = True).toInt()],
-                    isFixed = True, isMenu = True),
+                    isFixed = True, isMenu = True, canUndo = True),
 
             Command("Delete", "Delete the character under the cursor,"
                     " or selected text.", [wx.WXK_DELETE], isFixed = True),
@@ -732,14 +735,14 @@ class ConfigGlobal:
                     " cursor.", [wx.WXK_BACK, util.Key(wx.WXK_BACK, shift = True).toInt()], isFixed = True),
 
             Command("DeleteElements", "Open the 'Delete elements' dialog.",
-                    isMenu = True),
+                    isMenu = True, canUndo = True),
 
             Command("ExportScript", "Export the current script.",
                     isMenu = True),
 
             Command("FindAndReplaceDlg", "Open the 'Find & Replace' dialog.",
                     [util.Key(6, ctrl = True).toInt()],
-                    isFixed = True, isMenu = True),
+                    isFixed = True, isMenu = True, canUndo = True),
 
             Command("FindNextError", "Find next error in the current script.",
                     [util.Key(5, ctrl = True).toInt()], isMenu = True),
@@ -750,7 +753,7 @@ class ConfigGlobal:
 
                      # CTRL+Enter under wxMSW
                      util.Key(10, ctrl = True).toInt()],
-                    isFixed = True),
+                    isFixed = True, canUndo = True),
 
             Command("Fullscreen", "Toggle fullscreen.",
                     [util.Key(wx.WXK_F11).toInt()], isFixed = True,
@@ -830,7 +833,7 @@ class ConfigGlobal:
                     isMenu = True),
 
             Command("NewElement", "Create a new element.", [wx.WXK_RETURN],
-                    isFixed = True),
+                    isFixed = True, canUndo = True),
 
             Command("NewScript", "Create a new script.",
                     [util.Key(14, ctrl = True).toInt()],
@@ -844,10 +847,10 @@ class ConfigGlobal:
 
             Command("Paste", "Paste text from the internal clipboard.",
                     [util.Key(22, ctrl = True).toInt()],
-                    isFixed = True, isMenu = True),
+                    isFixed = True, isMenu = True, canUndo = True),
 
             Command("PasteSystemCb", "Paste text from the system's"
-                    " clipboard.", isMenu = True),
+                    " clipboard.", isMenu = True, canUndo = True),
 
             Command("PrintScript", "Print current script.",
                     [util.Key(16, ctrl = True).toInt()],
@@ -963,9 +966,8 @@ class ConfigGlobal:
         # how many seconds to show splash screen for on startup (0 = disabled)
         v.addInt("splashTime", 2, "SplashTime", 0, 10)
 
-        # confirm non-undoable delete operations that would delete at
-        # least this many lines. (0 = disabled)
-        v.addInt("confirmDeletes", 2, "ConfirmDeletes", 0, 500)
+        # size of undo buffer. (0 = disabled)
+        v.addInt("undoBufferSize", 50, "UndoBufferSize", 0, 500)
 
         # vertical distance between rows, in pixels
         v.addInt("fontYdelta", 18, "FontYDelta", 4, 125)
@@ -975,6 +977,11 @@ class ConfigGlobal:
 
         # interval in seconds between automatic pagination (0 = disabled)
         v.addInt("paginateInterval", 1, "PaginateInterval", 0, 10)
+
+        # confirm delete operations that would delete at
+        # least this many lines. (0 = disabled)
+        # confirmLineDeletes deprecates confirmDeletes.
+        v.addInt("confirmLineDeletes", 0, "ConfirmLineDeletes", 0, 500)
 
         # whether to check script for errors before export / print
         v.addBool("checkOnExport", True, "CheckScriptForErrors")

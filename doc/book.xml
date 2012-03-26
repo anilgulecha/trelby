@@ -473,6 +473,17 @@
 	</sect1>
 
 	<sect1>
+
+      <title>Edit/Undo,Redo</title>
+      <para>Undo/redo recent changes to the screenplay text.</para>
+
+      <para>The number of changes maintained in memory is defined in
+      the global settings, in the 'Miscellaneous' section.</para>
+
+    </sect1>
+
+    <sect1>
+
 	  <title>Edit/Cut,Copy,Paste</title>
 
 	  <para>Cut, copy and paste work pretty much the same way as in every

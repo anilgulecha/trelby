@@ -33,6 +33,7 @@ import pdf
 import pml
 import spellcheck
 import titles
+import undo
 import util
 
 import codecs
@@ -89,6 +90,32 @@ class Screenplay:
         # True if script has had changes done to it after
         # load/save/creation.
         self.hasChanged = False
+
+        self.init_undo()
+
+    def init_undo(self):
+        # create undo buffer
+        ui = undo.UndoItem(self.lines, self.line, self.column)
+        self.utrack = UndoTrack(self.addUndoPoint)
+        self.undoBuffer = undo.UndoBuffer(self.cfgGl.undoBufferSize, ui)
+
+    # Undo action in screenplay
+    def undo(self):
+        currentState = undo.UndoItem(self.lines, self.line, self.column)
+        if self.undoBuffer.undo(currentState):
+            self.line = currentState.line
+            self.column = currentState.column
+
+    # Redo action in screenplay
+    def redo(self):
+        currentState = undo.UndoItem(self.lines, self.line, self.column)
+        if self.undoBuffer.redo(currentState):
+            self.line = currentState.line
+            self.column = currentState.column
+
+    # Function to save current state in undo buffer.
+    def addUndoPoint(self, fast = False):
+        self.undoBuffer.add(undo.UndoItem(self.lines, self.line, self.column), fast)
 
     def isModified(self):
         if not self.hasChanged:
@@ -350,6 +377,7 @@ class Screenplay:
         sp.paginate()
         sp.titles.sort()
         sp.locations.refresh(sp.getSceneNames())
+        sp.init_undo()
 
         msgs = []
 
@@ -409,6 +437,7 @@ class Screenplay:
         self.reformatAll()
         self.paginate()
         self.markChanged()
+        self.init_undo()
 
     # return script config as a string.
     def saveCfg(self):
@@ -1600,6 +1629,7 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
 
     # split current line at current column position.
     def splitLine(self):
+        self.utrack.noCheckUndo()
         ln = self.lines[self.line]
 
         s = ln.text
@@ -2062,6 +2092,7 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
 
             self.rewrapElem()
             self.markChanged()
+            self.utrack.accumulateChange()
 
         return cd
 
@@ -2432,6 +2463,9 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
     def gotoPos(self, line, col, mark = False):
         self.clearAutoComp()
 
+        # any accumulated changes to save as undo point?
+        self.utrack.checkUndo()
+
         self.line = line
         self.column = col
 
@@ -2738,6 +2772,11 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
                     if doIt:
                         s = util.replace(s, "I", self.column - 1, 1)
 
+        if util.isAlnum(char):
+            self.utrack.accumulateChange()
+        else:
+            self.utrack.checkUndoFast()
+
         s = s[:self.column] + char + s[self.column:]
         ls[self.line].text = s
         self.column += 1
@@ -2838,6 +2877,41 @@ class Line:
     def __str__(self):
         return config.lb2char(self.lb) + config.lt2char(self.lt)\
                + self.text
+
+    def __hash__(self):
+        return self.__str__().__hash__()
+
+    def __eq__(self, line2):
+        return self.lt == line2.lt and self.lb == line2.lb  and\
+            self.text == line2.text
+
+# used to track if it's time for an Undo.
+class UndoTrack:
+    def __init__(self, undoAddFunc):
+        self.needsUndo = False
+        self.undoAddFunc = undoAddFunc
+
+        # have chars changed
+        self._change = False
+        # has hard undo event occured (newline, delete text, etc)
+        self._hardundo = False
+
+    def accumulateChange(self):
+        self._change = True
+
+    def checkUndo(self):
+        if self._change:
+            self.undoAddFunc()
+            self._change = False
+
+    def checkUndoFast(self):
+        if self._change:
+                self.undoAddFunc(fast = True)
+                self._change = False
+
+    def noCheckUndo(self):
+        self.undoAddFunc()
+        self._change = False
 
 # used to keep track of selected area. this marks one of the end-points,
 # while the other one is the current position.

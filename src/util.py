@@ -148,6 +148,10 @@ def toUTF8(s):
 def fromUTF8(s):
     return s.decode("UTF-8", "ignore").encode("ISO-8859-1", "ignore")
 
+# like fromUTF8, but with special characters replaced with XML equivalent.
+def toHtmlRef(s):
+    return s.decode("ISO-8859-1", "ignore").encode("ascii", "xmlcharrefreplace")
+
 # returns True if kc (key-code) is a valid character to add to the script.
 def isValidInputChar(kc):
     # [0x80, 0x9F] = unspecified control characters in ISO-8859-1, added

@@ -229,6 +229,28 @@ class DisplayPanel(wx.Panel):
         wx.EVT_BUTTON(self, btn.GetId(), self.OnChangeFont)
         vsizer.Add(btn, 0, wx.BOTTOM, 20)
 
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hsizer.Add(wx.StaticText(self, -1, "Scene navigator headline font: "), 0,
+                wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 10)
+
+        self.navFontCombo = wx.ComboBox(self, -1, style = wx.CB_READONLY,
+            choices = ["Small", "Normal", "Large", "Huge"])
+        self.navFontCombo.SetSelection(self.cfg.navFontSize)
+        hsizer.Add(self.navFontCombo)
+        vsizer.Add(hsizer, 0, wx.EXPAND | wx.BOTTOM, 5)
+
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hsizer.Add(wx.StaticText(self, -1, "Scene navigator summary font: "), 0,
+                wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 10)
+
+        self.navFontSmallCombo = wx.ComboBox(self, -1, style = wx.CB_READONLY,
+            choices = ["Small", "Normal", "Large", "Huge"])
+        self.navFontSmallCombo.SetSelection(self.cfg.navFontSmallSize)
+        wx.EVT_COMBOBOX(self, self.navFontSmallCombo.GetId(), self.OnNavSmallCombo)
+        hsizer.Add(self.navFontSmallCombo)
+
+        vsizer.Add(hsizer, 0, wx.EXPAND | wx.BOTTOM, 15)
+
         vsizer.Add(wx.StaticText(self, -1, "The settings below apply only"
                                 " to 'Draft' view mode."), 0, wx.BOTTOM, 15)
 
@@ -258,6 +280,12 @@ class DisplayPanel(wx.Panel):
         util.finishWindow(self, vsizer, center = False)
 
         wx.EVT_RADIOBOX(self, self.pbRb.GetId(), self.OnMisc)
+
+    def OnNavCombo(self, event):
+        self.cfg.navFontSize = self.navFontCombo.GetSelection()
+
+    def OnNavSmallCombo(self, event):
+        self.cfg.navFontSmallSize = self.navFontSmallCombo.GetSelection()
 
     def OnKillFocus(self, event):
         self.OnMisc()

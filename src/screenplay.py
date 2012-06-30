@@ -564,6 +564,10 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
             elif line.lb == LB_FORCED:
                 curLine += "\n"
 
+        # The last line may not have been appended.
+        if curLine:
+            eleList.append((lineType, curLine))
+
         return eleList
 
     # Generate a Final Draft XML file and return as string.

@@ -1535,7 +1535,8 @@
 
 	  <para>Existing screenplays can currently be imported from three
   	  file formats: as formatted ASCII text, Final Draft XML (.fdx),
-      Celtx (.celtx), Adobe Story (.astx) and Fountain (.fountain).
+      Celtx (.celtx), Adobe Story (.astx), Fountain (.fountain) and
+      Fade In Pro (.fadein).
       The following section documents the format these
       files should have for optimal import processing.</para>
 
@@ -1728,6 +1729,27 @@ Something starts beeping.
 
            <para>Page breaks are not supported (imported as an action line).
             </para>
+
+          </listitem>
+
+        </itemizedlist>
+
+		<para>Note that no formatting settings are imported at all.</para>
+
+	  </sect2>
+
+      <sect2>
+		<title>Fade In Pro (.fade)</title>
+
+		<para>These files are created by the Fade In Pro program.</para>
+
+		<itemizedlist>
+
+		  <listitem>
+
+            <para>Screenplay elements (Action, Dialog, Notes, etc) that
+            Trelby understands are imported. Others are converted to
+            'Action' type.</para>
 
           </listitem>
 

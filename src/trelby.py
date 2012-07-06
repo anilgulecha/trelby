@@ -1859,6 +1859,10 @@ class MyFrame(wx.Frame):
         addTB(ID_FILE_EXPORT, "export.png", "Export script")
 
         self.toolBar.AddSeparator()
+        addTB(ID_EDIT_UNDO, "undo.png", "Undo")
+        addTB(ID_EDIT_REDO, "redo.png", "Redo")
+
+        self.toolBar.AddSeparator()
 
         addTB(ID_EDIT_FIND, "find.png", "Find / Replace")
         addTB(ID_TOOLBAR_VIEWS, "layout.png", "View mode")

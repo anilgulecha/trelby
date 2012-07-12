@@ -816,6 +816,10 @@ class FormattingPanel(wx.Panel):
         wx.EVT_CHECKBOX(self, self.scenesCb.GetId(), self.OnMisc)
         vsizer.Add(self.scenesCb, 0, wx.TOP, 10)
 
+        self.charCb = wx.CheckBox(self, -1, "Treat character extensions (V.O, S.O, etc) separately in reports.")
+        wx.EVT_CHECKBOX(self, self.charCb.GetId(), self.OnMisc)
+        vsizer.Add(self.charCb, 0, wx.TOP, 10)
+
         # wxGTK adds way more space by default than wxMSW between the
         # items, have to adjust for that
         pad = 0
@@ -858,6 +862,7 @@ class FormattingPanel(wx.Panel):
         self.cfg.fontSize = util.getSpinValue(self.fontSizeEntry)
         self.cfg.pdfShowSceneNumbers = self.scenesCb.GetValue()
         self.cfg.pdfShowLineNumbers = self.lineNumbersCb.GetValue()
+        self.cfg.charExtensionSeparate = self.charCb.GetValue()
 
     def cfg2gui(self):
         # stupid wxwindows/wxpython displays empty box if the initial
@@ -873,6 +878,7 @@ class FormattingPanel(wx.Panel):
         self.fontSizeEntry.SetValue(self.cfg.fontSize)
         self.scenesCb.SetValue(self.cfg.pdfShowSceneNumbers)
         self.lineNumbersCb.SetValue(self.cfg.pdfShowLineNumbers)
+        self.charCb.SetValue(self.cfg.charExtensionSeparate)
 
 class KeyboardPanel(wx.Panel):
     def __init__(self, parent, id, cfg):

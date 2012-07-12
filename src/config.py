@@ -466,6 +466,9 @@ class Config:
         # scene continued text indent width
         v.addInt("sceneContinuedIndent", 45, "SceneContinuedIndent", -20, 80)
 
+        # character extensions as separate entities in report
+        v.addBool("charExtensionSeparate", False, "CharacterExtensionSeparate")
+
         # whether to include scene numbers
         v.addBool("pdfShowSceneNumbers", False, "ShowSceneNumbers")
 

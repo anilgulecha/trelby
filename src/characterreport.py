@@ -65,7 +65,7 @@ class CharacterReport:
 
             elif (line.lt == screenplay.CHARACTER) and\
                    (line.lb == screenplay.LB_LAST):
-                name = util.upper(line.text)
+                name = util.getName(line.text, sp.cfg.charExtensionSeparate)
                 curSpeechLines = 0
 
             elif line.lt in (screenplay.DIALOGUE, screenplay.PAREN) and name:

@@ -1083,3 +1083,19 @@ def showPDF(filename, cfgGl, frame):
         os.spawnv(os.P_NOWAIT, pdfProgram.encode("UTF-8"), args)
     except OSError:
         complain()
+
+
+char_re = re.compile(r'(.*)[\w]*\(.*\)$')
+
+# Depending if treatUnique is true or not, remove character extensions,
+# and return name in uppercase. Always remove "cont'd" or it's equivalents.
+def getName(s, treatUnique):
+    if treatUnique:
+        s = upper(s)
+        if s.find("(CON") != -1:
+            return char_re.sub(r"\1", s).strip()
+        else:
+            return s
+    else:
+        return upper(char_re.sub(r"\1", s).strip())
+

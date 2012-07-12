@@ -166,7 +166,7 @@ class SceneInfo:
             return endLine
 
         # TODO: handle multi-line character names
-        s = util.upper(ls[line].text)
+        s = util.getName(ls[line].text, sp.cfg.charExtensionSeparate)
         if len(s.strip()) == 0:
             name = "(EMPTY CHARACTER NAME)"
         else:

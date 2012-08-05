@@ -888,6 +888,9 @@ class ConfigGlobal:
             Command("SaveSettingsAs", "Save global settings to a new file.",
                     isMenu = True),
 
+            Command("SceneRearrange", "Open scene rearrange dialog.",
+                    isMenu = True),
+
             Command("ScriptNext", "Change to next open script.",
                     [util.Key(wx.WXK_TAB, ctrl = True).toInt(),
                      util.Key(wx.WXK_PAGEDOWN, ctrl = True).toInt()],

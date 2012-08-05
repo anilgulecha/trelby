@@ -20,6 +20,7 @@ import mypickle
 import namesdlg
 import opts
 import pml
+import scenerearrangedlg
 import scenereport
 import scriptreport
 import screenplay
@@ -184,10 +185,13 @@ class MyPanel(wx.Panel):
         self.navsizer = wx.BoxSizer(wx.VERTICAL)
         self.toprow = wx.BoxSizer(wx.HORIZONTAL)
         self.nav = misc.MyNavigator(self, -1, getCfgGui)
+        self.rearrange = misc.MyButton(self, -1, "resources/rearrange.png", getCfgGui)
+        self.rearrange.SetToolTipString("Rearrange scenes")
         self.navclose = misc.MyButton(self, -1, "resources/close.png", getCfgGui)
         self.navclose.SetToolTipString("Close navigator")
 
         self.toprow.Add(wx.StaticText(self, -1,"Scene navigator"), 1, wx.EXPAND | wx.LEFT | wx.TOP , 5)
+        self.toprow.Add(self.rearrange, 0, wx.RIGHT, 5)
         self.toprow.Add(self.navclose)
         self.navsizer.Add(self.toprow, 0,  wx.EXPAND | wx.TOP | wx.BOTTOM | wx.RIGHT, 2)
         self.navsizer.Add(self.nav, 1, wx.EXPAND)
@@ -208,6 +212,7 @@ class MyPanel(wx.Panel):
         wx.EVT_SET_FOCUS(self.nav, self.OnOtherFocus)
         wx.EVT_LISTBOX(self, self.nav.GetId(), self.OnItemSelected)
         wx.EVT_BUTTON(self, self.navclose.GetId(), mainFrame.OnToggleShowNavigator)
+        wx.EVT_BUTTON(self, self.rearrange.GetId(), mainFrame.OnSceneRearrange)
 
         # vars to track last line count and line for navigator
         self.lastLineCount = -1
@@ -776,6 +781,12 @@ class MyCtrl(wx.Control):
             mainFrame, self.sp, self.fileNameDisplay.replace(".trelby", ""))
         dlg.ShowModal()
         dlg.Destroy()
+
+    def OnSceneRearrange(self):
+        dlg = scenerearrangedlg.SceneRearrangeDlg(mainFrame, self.sp)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.updateScreen()
 
     def OnReportDialogueChart(self):
         self.sp.paginate()
@@ -1897,6 +1908,7 @@ class MyFrame(wx.Frame):
 
         toolsMenu = wx.Menu()
         toolsMenu.Append(ID_TOOLS_SPELL_CHECK, "&Spell checker...")
+        toolsMenu.Append(ID_TOOLS_REARRANGE, "&Rearrange Scenes...")
         toolsMenu.Append(ID_TOOLS_NAME_DB, "&Name database...")
         toolsMenu.Append(ID_TOOLS_CHARMAP, "&Character map...")
         toolsMenu.Append(ID_TOOLS_COMPARE_SCRIPTS, "C&ompare scripts...")
@@ -2062,6 +2074,7 @@ class MyFrame(wx.Frame):
         wx.EVT_MENU(self, ID_REPORTS_LOCATION_REP, self.OnReportLocation)
         wx.EVT_MENU(self, ID_REPORTS_SCENE_REP, self.OnReportScene)
         wx.EVT_MENU(self, ID_TOOLS_SPELL_CHECK, self.OnSpellCheckerDlg)
+        wx.EVT_MENU(self, ID_TOOLS_REARRANGE, self.OnSceneRearrange)
         wx.EVT_MENU(self, ID_TOOLS_NAME_DB, self.OnNameDatabase)
         wx.EVT_MENU(self, ID_TOOLS_CHARMAP, self.OnCharacterMap)
         wx.EVT_MENU(self, ID_TOOLS_COMPARE_SCRIPTS, self.OnCompareScripts)
@@ -2158,6 +2171,7 @@ class MyFrame(wx.Frame):
             "ID_TOOLS_COMPARE_SCRIPTS",
             "ID_TOOLS_NAME_DB",
             "ID_TOOLS_SPELL_CHECK",
+            "ID_TOOLS_REARRANGE",
             "ID_TOOLS_WATERMARK",
             "ID_VIEW_SHOW_FORMATTING",
             "ID_VIEW_STYLE_DRAFT",
@@ -2577,6 +2591,9 @@ class MyFrame(wx.Frame):
 
     def OnWatermark(self, event = None):
         self.panel.ctrl.OnWatermark()
+
+    def OnSceneRearrange(self, event = None):
+        self.panel.ctrl.OnSceneRearrange()
 
     def OnScriptSettings(self, event = None):
         self.panel.ctrl.OnScriptSettings()

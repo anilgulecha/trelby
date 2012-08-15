@@ -121,12 +121,13 @@ class MyColorSample(wx.Window):
 
 # Custom "exit fullscreen" button for our tab bar. Used so that we have
 # full control over the button's size.
-class MyFSButton(wx.Window):
-    def __init__(self, parent, id, getCfgGui):
+class MyButton(wx.Window):
+    # bitmap - icon to use for the button
+    def __init__(self, parent, id, bitmap, getCfgGui):
         wx.Window.__init__(self, parent, id, size = (TAB_BAR_HEIGHT, TAB_BAR_HEIGHT))
 
         self.getCfgGui = getCfgGui
-        self.fsImage = getBitmap("resources/fullscreen.png")
+        self.fsImage = getBitmap(bitmap)
 
         wx.EVT_PAINT(self, self.OnPaint)
         wx.EVT_LEFT_DOWN(self, self.OnMouseDown)

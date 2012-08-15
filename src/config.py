@@ -940,9 +940,12 @@ class ConfigGlobal:
             Command("ToggleShowFormatting", "Toggle 'Show formatting'"
                     " display.", isMenu = True),
 
+            Command("ToggleShowNavigator", "Show/hide the 'Scene Navigator' panel.",
+                    [util.Key(wx.WXK_F9).toInt()], isMenu = True),
+
             Command("Undo", "Undo the last change.",
-                    [util.Key(26, ctrl = True).toInt()],
-                    isFixed = True, isMenu = True),
+                   [util.Key(26, ctrl = True).toInt()],
+                   isFixed = True, isMenu = True),
 
             Command("ViewModeDraft", "Change view mode to draft.",
                     isMenu = True),
@@ -1047,6 +1050,13 @@ class ConfigGlobal:
         v.addColor("tabBarBg", 221, 217, 215, "TabBarBG",
                    "Tab bar background")
         v.addColor("tabNonActiveBg", 180, 180, 180, "TabNonActiveBg", "Tab, non-active")
+        v.addColor("navSceneText", 0, 0, 0, "NavSceneText", "Navigator scene text")
+        v.addColor("navSceneSelectedMark", 185, 185, 222, "NavSceneSelectedMark", "Navigator selected scene marker")
+        v.addColor("navNoteText", 128, 128, 0, "NavNoteText", "Navigator note text")
+        v.addColor("navBlurbText", 96, 96, 96, "NavBlurbText", "Navigator blurb text")
+        v.addColor("navTransitionText", 128, 0, 128, "NavTransitionText", "Navigator transition text")
+        v.addColor("navBg", 255, 255, 255, "NavBg", "Navigator background")
+        v.addColor("navAnnotatedBg", 255, 237, 223, "NavAnnotatedBg", "Navigator annotated scene background")
 
         for t in getTIs():
             v.addColor("text%s" % t.name, 0, 0, 0, "Text%sFG" % t.name,

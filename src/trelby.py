@@ -21,6 +21,7 @@ import namesdlg
 import opts
 import pml
 import scenereport
+import scenenav
 import scriptreport
 import screenplay
 import spellcheck
@@ -59,6 +60,8 @@ VIEWMODE_SIDE_BY_SIDE,\
 VIEWMODE_OVERVIEW_SMALL,\
 VIEWMODE_OVERVIEW_LARGE,\
 = range(5)
+
+NAV_TIMER_BUFFER = 500
 
 def refreshGuiConfig():
     global cfgGui
@@ -101,6 +104,7 @@ class GlobalData:
         v.addInt("width", defaultW, "Width", 500, 9999)
 
         v.addInt("height", 830, "Height", 300, 9999)
+        v.addBool("showNavigator", False, "ShowNavigator")
         v.addInt("viewMode", VIEWMODE_DRAFT, "ViewMode", VIEWMODE_DRAFT,
                  VIEWMODE_OVERVIEW_LARGE)
 
@@ -174,25 +178,81 @@ class MyPanel(wx.Panel):
             # wx.NO_BORDER, which sucks
             style = wx.WANTS_CHARS | wx.NO_BORDER)
 
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.hsizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.SetBackgroundColour(cfgGui.workspaceColor)
+
+        self.navsizer = wx.BoxSizer(wx.VERTICAL)
+        self.toprow = wx.BoxSizer(wx.HORIZONTAL)
+        self.nav = scenenav.MyNavigator(self, -1, getCfgGui)
+        self.navclose = misc.MyButton(self, -1, "resources/close.png", getCfgGui)
+        self.navclose.SetToolTipString("Close navigator")
+
+        self.toprow.Add(wx.StaticText(self, -1,"Scene navigator"), 1, wx.EXPAND | wx.LEFT | wx.TOP , 5)
+        self.toprow.Add(self.navclose)
+        self.navsizer.Add(self.toprow, 0,  wx.EXPAND | wx.TOP | wx.BOTTOM | wx.RIGHT, 2)
+        self.navsizer.Add(self.nav, 1, wx.EXPAND)
 
         self.scrollBar = wx.ScrollBar(self, -1, style = wx.SB_VERTICAL)
         self.ctrl = MyCtrl(self, -1)
 
-        hsizer.Add(self.ctrl, 1, wx.EXPAND)
-        hsizer.Add(self.scrollBar, 0, wx.EXPAND)
+        self.hsizer.Add(self.ctrl, 1, wx.EXPAND)
+        self.hsizer.Add(self.scrollBar, 0, wx.EXPAND)
+
+
+        self.hsizer.Add(self.navsizer, 0, wx.EXPAND)
 
         wx.EVT_COMMAND_SCROLL(self, self.scrollBar.GetId(),
                               self.ctrl.OnScroll)
 
-        wx.EVT_SET_FOCUS(self.scrollBar, self.OnScrollbarFocus)
+        wx.EVT_SET_FOCUS(self.scrollBar, self.OnOtherFocus)
+        wx.EVT_SET_FOCUS(self.nav, self.OnOtherFocus)
+        wx.EVT_LISTBOX(self, self.nav.GetId(), self.OnItemSelected)
+        wx.EVT_BUTTON(self, self.navclose.GetId(), mainFrame.OnToggleShowNavigator)
 
-        self.SetSizer(hsizer)
+        # vars to track last line count and line for navigator
+        self.lastLineCount = -1
+        self.lastLine = -1
 
-    # we never want the scrollbar to get the keyboard focus, pass it on to
-    # the main widget
-    def OnScrollbarFocus(self, event):
+        self.SetSizer(self.hsizer)
+        self.ShowNavigator(gd.showNavigator)
+
+    # show - bool value indicating if navigator shoulw be shown.
+    def ShowNavigator(self, show):
+        gd.showNavigator = show
+        if show:
+            self.hsizer.Show(self.navsizer)
+            self.updateNav()
+        else:
+            self.hsizer.Hide(self.navsizer)
+        self.hsizer.Layout()
+
+    # we want only main ctrl widget to get the keyboard focus. When others
+    # get it, pass it on the main widget.
+    def OnOtherFocus(self, event):
         self.ctrl.SetFocus()
+
+    def OnItemSelected(self, event):
+        lineno = self.nav.getClickedLineNo()
+
+        if self.ctrl.navTimer.IsRunning():
+            self.ctrl.OnNavTimer()
+
+        elif lineno >= len(self.ctrl.sp.lines):
+            self.updateNav()
+
+        else:
+            self.ctrl.sp.gotoPos(lineno, 0)
+            self.ctrl.makeLineVisible(lineno)
+            self.ctrl.updateScreen()
+
+    def updateNav(self):
+        # do nothing if navigator is hidden
+        if not self.hsizer.IsShown(self.navsizer):
+            return
+        # update the navigator list
+        self.nav.setItems(self.ctrl.sp)
+        self.ctrl.lnCountLast = len(self.ctrl.sp.lines)
 
 class MyCtrl(wx.Control):
 
@@ -214,7 +274,17 @@ class MyCtrl(wx.Control):
         wx.EVT_CHAR(self, self.OnKeyChar)
 
         self.createEmptySp()
+
+        self.lnCountLast = len(self.sp.lines)
+
+        self.navTimer = wx.Timer(self)
+        wx.EVT_TIMER(self, self.navTimer.GetId(), self.OnNavTimer)
+
         self.updateScreen(redraw = False)
+
+    def OnNavTimer(self, event = None):
+        self.navTimer.Stop()
+        self.panel.updateNav()
 
     def OnChangeType(self, event):
         cs = screenplay.CommandState()
@@ -440,7 +510,19 @@ class MyCtrl(wx.Control):
         else:
             return True
 
-    def updateScreen(self, redraw = True, setCommon = True):
+    def updateScreen(self, redraw = True, setCommon = True, immNavUpdate = False):
+        # When line count has changed, or immNavUpdate, immediately
+        # udpate navigator, else collate the updates via timer.
+        lnCount = len(self.sp.lines)
+        if lnCount != self.lnCountLast or immNavUpdate:
+            self.panel.updateNav()
+        else:
+            if self.navTimer.IsRunning():
+                self.navTimer.Stop()
+                self.navTimer.Start(NAV_TIMER_BUFFER, True)
+            else:
+                self.navTimer.Start(NAV_TIMER_BUFFER, True)
+
         self.adjustScrollBar()
 
         if setCommon:
@@ -501,6 +583,7 @@ class MyCtrl(wx.Control):
 
         for c in mainFrame.getCtrls():
             c.sp.cfgGl = cfgGl
+            c.panel.nav.fullRedraw()
             c.refreshCache()
             c.makeLineVisible(c.sp.line)
             c.adjustScrollBar()
@@ -577,7 +660,7 @@ class MyCtrl(wx.Control):
 
         if line is not None:
             self.sp.gotoPos(line, col, mark)
-            self.updateScreen()
+            self.updateScreen(immNavUpdate = True)
 
     def OnLeftUp(self, event):
         self.mouseSelectActive = False
@@ -1434,6 +1517,7 @@ class MyCtrl(wx.Control):
 
         dc.SetPen(cfgGui.tabBorderPen)
         dc.DrawLine(0,0,0,size.height)
+        dc.DrawLine(size.width -1 ,0,size.width-1 ,size.height)
 
         if not dpages:
             # draft mode; draw an infinite page
@@ -1763,6 +1847,9 @@ class MyFrame(wx.Frame):
 
         viewMenu.AppendSeparator()
         viewMenu.AppendCheckItem(ID_VIEW_SHOW_FORMATTING, "&Show formatting")
+        viewMenu.AppendCheckItem(ID_VIEW_SHOW_NAVIGATOR, "Show Scene &Navigator\tF9")
+        if gd.showNavigator:
+            viewMenu.Check(ID_VIEW_SHOW_NAVIGATOR, True)
         viewMenu.Append(ID_VIEW_FULL_SCREEN, "&Fullscreen\tF11")
 
         scriptMenu = wx.Menu()
@@ -1859,7 +1946,7 @@ class MyFrame(wx.Frame):
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.noFSBtn = misc.MyFSButton(self, -1, getCfgGui)
+        self.noFSBtn = misc.MyButton(self, -1, "resources/fullscreen.png", getCfgGui)
         self.noFSBtn.SetToolTipString("Exit fullscreen")
         self.noFSBtn.Show(False)
         hsizer.Add(self.noFSBtn)
@@ -1948,6 +2035,7 @@ class MyFrame(wx.Frame):
         wx.EVT_MENU(self, ID_VIEW_STYLE_OVERVIEW_LARGE, self.OnViewModeChange)
         wx.EVT_MENU(self, ID_VIEW_SHOW_FORMATTING, self.OnShowFormatting)
         wx.EVT_MENU(self, ID_VIEW_FULL_SCREEN, self.ToggleFullscreen)
+        wx.EVT_MENU(self, ID_VIEW_SHOW_NAVIGATOR, self.OnShowNavigator)
         wx.EVT_MENU(self, ID_SCRIPT_FIND_ERROR, self.OnFindNextError)
         wx.EVT_MENU(self, ID_SCRIPT_PAGINATE, self.OnPaginate)
         wx.EVT_MENU(self, ID_SCRIPT_AUTO_COMPLETION, self.OnAutoCompletionDlg)
@@ -2076,6 +2164,7 @@ class MyFrame(wx.Frame):
             "ID_TOOLBAR_VIEWS",
             "ID_TOOLBAR_TOOLS",
             "ID_VIEW_FULL_SCREEN",
+            "ID_VIEW_SHOW_NAVIGATOR",
             "ID_ELEM_TO_ACTION",
             "ID_ELEM_TO_CHARACTER",
             "ID_ELEM_TO_DIALOGUE",
@@ -2447,6 +2536,15 @@ class MyFrame(wx.Frame):
         self.noFSBtn.Show(not self.IsFullScreen())
         self.ShowFullScreen(not self.IsFullScreen(), wx.FULLSCREEN_ALL)
         self.panel.ctrl.SetFocus()
+
+    def OnToggleShowNavigator(self, event = None):
+        self.menuBar.Check(ID_VIEW_SHOW_NAVIGATOR,
+            not self.menuBar.IsChecked(ID_VIEW_SHOW_NAVIGATOR))
+        self.OnShowNavigator(event)
+
+    def OnShowNavigator(self, event = None):
+        show = self.menuBar.IsChecked(ID_VIEW_SHOW_NAVIGATOR)
+        self.panel.ShowNavigator(show)
 
     def OnPaginate(self, event = None):
         self.panel.ctrl.OnPaginate()

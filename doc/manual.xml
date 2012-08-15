@@ -624,7 +624,21 @@
 
 	</sect1>
 
-	<sect1>
+    <sect1>
+	  <title>View/Show Scene Navigator</title>
+
+      <para>This toggles a sidebar in the main window that lists all the
+      scenes and notes in the current screenplay. Clicking on an item in
+      the navigator will take you to that line in the screenplay.</para>
+
+      <para>A note element immediately after a Scene Heading is considered
+      as an outline/annotation of that scene, and the scene is highlited in
+      the navigator list. This allows the use of the navigator as an
+      outliner.</para>
+
+	</sect1>
+
+    <sect1>
 	  <title>View/Fullscreen</title>
 
 	  <para>Changes the display to fullscreen mode, hiding all

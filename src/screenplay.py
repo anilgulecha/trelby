@@ -90,6 +90,9 @@ class Screenplay:
         # load/save/creation.
         self.hasChanged = False
 
+        # Was backspace just pressed?
+        self.backspacePressed = False
+
     def isModified(self):
         if not self.hasChanged:
             return False
@@ -2221,7 +2224,7 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
     # returns true if a character, inserted at current position, would
     # need to be capitalized as a start of a sentence.
     def capitalizeNeeded(self):
-        if not self.cfgGl.capitalize:
+        if not self.cfgGl.capitalize or self.backspacePressed:
             return False
 
         ls = self.lines
@@ -2798,6 +2801,8 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
         char = cs.char
         if self.capitalizeNeeded():
             char = util.upper(char)
+
+        self.backspacePressed = False
 
         ls = self.lines
         s = ls[self.line].text

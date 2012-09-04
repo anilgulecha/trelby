@@ -1226,6 +1226,7 @@ class MyCtrl(wx.Control):
     def cmdDeleteBackward(self, cs):
         if not self.sp.mark:
             self.sp.deleteBackwardCmd(cs)
+            self.sp.backspacePressed = True
         else:
             self.OnCut(doUpdate = False, copyToClip = False)
 

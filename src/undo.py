@@ -168,3 +168,118 @@ class ManyElems(Base):
             sp.lines[self.elemStartLine : endLine + 1])
 
         self.setEndPos(sp)
+
+# stores any block of lines that have changed. Requires before/after lines
+# to compare.
+class AnyDifference(Base):
+    # Will look for difference between sp.lines before and after.
+    # job to make sure that these are available.
+    def __init__(self, sp):
+        Base.__init__(self, sp, CMD_MISC)
+        self.linesBefore = lines2storage(sp.lines)
+
+    def setAfter(self, sp):
+        self.removed = None
+        self.inserted = None
+
+        oldlines = storage2lines(self.linesBefore)
+
+        a, b, x, y = mySequenceMatcher(oldlines, sp.lines)
+        if a != b:
+            self.removed = lines2storage(oldlines[a:b])
+        if x != y:
+            self.inserted = lines2storage(sp.lines[x:y])
+
+        self.a, self.b, self.x, self.y = a, b, x, y
+        self.setEndPos(sp)
+
+    # default implementation for undo. can be overridden by subclasses
+    # that need something different.
+    def undo(self, sp):
+        sp.line, sp.column = self.startPos.line, self.startPos.column
+        if self.removed:
+            sp.lines[self.x:self.y] = storage2lines(self.removed)
+        else:
+            sp.lines[self.x:self.y] = []
+
+    # default implementation for redo. can be overridden by subclasses
+    # that need something different.
+    def redo(self, sp):
+        sp.line, sp.column = self.endPos.line, self.endPos.column
+        if self.inserted:
+            sp.lines[self.a:self.b] = storage2lines(self.inserted)
+        else:
+            sp.lines[self.a:self.b] = []
+
+
+# Our own implementation of difflib.SequenceMatcher, since the actual one
+# is too slow for our custom needs.
+#
+# l1, l2 = lists to diff. List elements must have __eq__ defined.
+#
+# Return a, b, x, y such that l1[a:b] could be replaced
+# with l2[x:y] to convert l1 into l2.
+#
+# This function can also be completed in constant time, if you know that only
+# a single item at position 'line' has changed. Call with fast set to True,
+# then only worries about items from line - 1 to line + 1.
+
+def mySequenceMatcher(l1, l2, fast = False, line = -1):
+    len1 = len(l1)
+    len2 = len(l2)
+
+    if len1 >= len2:
+        bigger = l1
+        smaller = l2
+        biglen = len1
+        smalllen = len2
+        l1Big = True
+    else:
+        bigger = l2
+        smaller = l1
+        biglen = len2
+        smalllen = len1
+        l1Big = False
+
+    i = 0
+    a = b = 0
+
+    if fast and (line > 0):
+        # no need to start from the beginning.. assume everything matches
+        # until line - 1
+        a = b = line - 1
+
+    m1found = m2found = False
+    while a < smalllen:
+        if not m1found and bigger[a] != smaller [a]:
+            b = a
+            m1found = True
+            break
+        a += 1
+
+    if not m1found:
+        a = b = smalllen
+
+    i = 0
+    c = biglen
+    d = smalllen
+
+    if fast and (line < smalllen - 1):
+        # assume things match till we traverse down to upto line + 1
+        d = line + 1
+        c = d + (biglen - smalllen)
+        #print "right set to ", c, d
+
+
+    while i <= smalllen - a + 1:
+        if bigger[-i] != smaller[-i]:
+            c = biglen - i + 1
+            d = smalllen - i + 1
+            m2found = True
+            break
+        i += 1
+
+    if not l1Big:
+        a, c, b, d = a, d, b, c
+
+    return a, c, b, d

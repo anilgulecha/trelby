@@ -43,11 +43,11 @@ deleteBackward:
   (not start of elem)  ManyElems(1, 1) (possibly merged)
   (start of elem)      ManyElems(2, 1)
 convertTypeTo          ManyElems(N, N)
+cut (via getSelectedAsCD(dodelete = True))  AnyDifference
+paste                  AnyDifference
 
 remaining:
-
-cut                    1-N elems
-paste                  1-N elems
+-none?-
 
 
 other:
@@ -60,6 +60,7 @@ other:
 
   -emacs-like behavior while in middle of undo history; keeps us from ever
    losing any history
+    -- but this should not in normal usage (ctrl-z, ctrl-y) be any different from notepad/gedit like behavior.
 
   -implement undo history trimming (estimate memory usage of each item,
    and cap used memory at X)

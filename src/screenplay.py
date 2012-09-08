@@ -101,6 +101,10 @@ class Screenplay:
         #  anything else: None
         self.currentUndo = None
 
+        # Was the last pressed single character a space?
+        #  - used by addCharCmd to keep track of when to break undo merge.
+        self.lastAddCharWasSpace = False
+
     def isModified(self):
         if not self.hasChanged:
             return False
@@ -2917,6 +2921,8 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
         if len(cs.char) != 1:
             return
 
+        char = cs.char
+        isSpace = (char == ' ')
         kc = ord(cs.char)
         if not util.isValidInputChar(kc):
             return
@@ -2925,16 +2931,19 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
         #   -we are not in middle of undo/redo
         #   -previous item is "add character"
         #   -cursor is exactly where it was left off by the previous item
+        #   -last charactertype (alphanum or not) is the same as char
         if (not self.currentUndo and self.lastUndo and
             (self.lastUndo.getType() == undo.CMD_ADD_CHAR) and
-            (self.lastUndo.endPos == self.cursorAsMark())):
+            (self.lastUndo.endPos == self.cursorAsMark()) and
+            not (isSpace and not self.lastAddCharWasSpace)):
             u = self.lastUndo
             mergeUndo = True
         else:
             u = undo.SinglePara(self, undo.CMD_ADD_CHAR, self.line)
             mergeUndo = False
 
-        char = cs.char
+        self.lastAddCharWasSpace = isSpace
+
         if self.capitalizeNeeded():
             char = util.upper(char)
 

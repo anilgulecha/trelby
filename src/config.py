@@ -998,6 +998,9 @@ class ConfigGlobal:
         # instead of using textColor for all elem types
         v.addBool("useCustomElemColors", False, "UseCustomElemColors")
 
+        # whether to enable recovering files after a crash
+        v.addBool("enableRecovery", True, "EnableRecovery")
+
         # page break indicators to show
         v.addInt("pbi", PBI_REAL, "PageBreakIndicators", PBI_FIRST,
                     PBI_LAST)

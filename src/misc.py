@@ -1000,3 +1000,48 @@ class MRUFiles:
     # get item number 'i'.
     def get(self, i):
         return self.items[i]
+
+# shows a "Exit without saving" / "Cancel" dialog.
+#  returns wx.ID_OK and wx.CANCEL respectively.
+
+class ExitCancelDlg(wx.Dialog):
+    def __init__(self, parent, text, title):
+        wx.Dialog.__init__(self, parent, -1, title,
+                           style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        bmp = wx.ArtProvider_GetBitmap(wx.ART_WARNING, wx.ART_MESSAGE_BOX, (32,32))
+        img = wx.StaticBitmap(self, wx.ID_ANY, bmp)
+        tc = wx.StaticText(self, -1)
+        tc.SetLabel(text)
+
+        hsizer.Add(img, 0, wx.ALIGN_CENTER_VERTICAL)
+        hsizer.Add(tc, 0, wx.LEFT, 10)
+
+        vsizer.Add(hsizer);
+
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        exitBtn = wx.Button(self, -1, "&Exit without saving")
+        hsizer.Add(exitBtn)
+        wx.EVT_BUTTON(self, exitBtn.GetId(), self.OnExitWithout)
+
+        cancelBtn = gutil.createStockButton(self, "Cancel")
+        hsizer.Add(cancelBtn, 0, wx.LEFT, 10)
+        wx.EVT_BUTTON(self, cancelBtn.GetId(), self.OnCancel)
+
+        vsizer.Add(hsizer, 0, wx.ALIGN_RIGHT | wx.TOP, 20)
+
+        util.finishWindow(self, vsizer)
+
+        cancelBtn.SetFocus()
+
+    def OnExitWithout(self, event):
+        self.EndModal(wx.OK)
+
+    def OnCancel(self, event):
+        self.EndModal(wx.CANCEL)
+

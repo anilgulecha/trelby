@@ -1030,6 +1030,14 @@ def getWindowsPDFViewer():
 
     return None
 
+def getRecoveryFilePath(name):
+    return misc.confPath + "/" + name + "_" + str(time.time()) + ".recov"
+
+# returns a list of recovery files we can load, or an empty list
+# if nothing to be recovered
+def listRecoveryFiles():
+    return glob.glob(misc.confPath + "/*recov")
+
 # show PDF file.
 def showPDF(filename, cfgGl, frame):
     def complain():

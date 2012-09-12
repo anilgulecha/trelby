@@ -90,6 +90,10 @@ class Screenplay:
         # load/save/creation.
         self.hasChanged = False
 
+        # True if script has had changes done to if after
+        # last recovery. Set to false after a recovery save.
+        self.hasChangedSinceRecovery = False
+
     def isModified(self):
         if not self.hasChanged:
             return False
@@ -100,8 +104,15 @@ class Screenplay:
 
         return (len(self.lines) > 1) or bool(self.lines[0].text)
 
+    def isModifiedSinceRecovery(self):
+        if not self.hasChangedSinceRecovery:
+            return False
+
+        return (len(self.lines) > 1) or bool(self.lines[0].text)
+
     def markChanged(self, state = True):
         self.hasChanged = state
+        self.hasChangedSinceRecovery = state
 
     # return True if the line is a parenthetical and not the first line of
     # that element (such lines need an extra space of indenting).

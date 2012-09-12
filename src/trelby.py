@@ -60,6 +60,9 @@ VIEWMODE_OVERVIEW_SMALL,\
 VIEWMODE_OVERVIEW_LARGE,\
 = range(5)
 
+# How long between saves for crash-recovery?
+RECOVERY_TIMER = 90000
+
 def refreshGuiConfig():
     global cfgGui
 
@@ -202,6 +205,11 @@ class MyCtrl(wx.Control):
 
         self.panel = parent
 
+        # recovery controls and callback setup
+        self.recoveryFilePath = ""
+        self.recoveryTimer = wx.Timer(self)
+        wx.EVT_TIMER(self, -1, self.OnRecoveryTimer)
+
         wx.EVT_SIZE(self, self.OnSize)
         wx.EVT_PAINT(self, self.OnPaint)
         wx.EVT_ERASE_BACKGROUND(self, self.OnEraseBackground)
@@ -303,6 +311,7 @@ class MyCtrl(wx.Control):
             self.setFile(fileName)
             self.sp.markChanged(False)
             gd.mru.add(fileName)
+            self.initRecovery()
 
             return True
         else:
@@ -370,6 +379,28 @@ class MyCtrl(wx.Control):
 
         self.setTabText()
         mainFrame.setTitle(self.fileNameDisplay)
+
+        if cfgGl.enableRecovery:
+            self.initRecovery()
+
+    def initRecovery(self):
+        if self.recoveryFilePath and util.fileExists(self.recoveryFilePath):
+            # delete it
+            os.remove(self.recoveryFilePath)
+
+        self.recoveryFilePath = util.getRecoveryFilePath(self.fileNameDisplay)
+        self.recoveryTimer.Stop()
+        self.recoveryTimer.Start(RECOVERY_TIMER)
+
+    def clearRecovery(self):
+        self.recoveryTimer.Stop()
+        if self.recoveryFilePath and util.fileExists(self.recoveryFilePath):
+            os.remove(self.recoveryFilePath)
+
+    def OnRecoveryTimer(self, event):
+        if self.sp.isModifiedSinceRecovery():
+            util.writeToFile(self.recoveryFilePath, self.sp.save(), mainFrame)
+            self.sp.hasChangedSinceRecovery = False
 
     def setDisplayName(self, name):
         i = 1
@@ -499,6 +530,10 @@ class MyCtrl(wx.Control):
             c.refreshCache()
             c.makeLineVisible(c.sp.line)
             c.adjustScrollBar()
+            if cfgGl.enableRecovery:
+                c.initRecovery()
+            else:
+                c.clearRecovery()
 
         self.updateScreen()
 
@@ -2141,11 +2176,12 @@ class MyFrame(wx.Frame):
 
     # returns True if any open script has been modified
     def isModifications(self):
+        modified = []
         for c in self.getCtrls():
             if c.sp.isModified():
-                return True
+                modified.append(c.fileNameDisplay)
 
-        return False
+        return modified
 
     def updateKbdCommands(self):
         cfgGl.addShiftKeys()
@@ -2165,14 +2201,19 @@ class MyFrame(wx.Frame):
 
     # open script, in the current tab if it's untouched, or in a new one
     # otherwise
-    def openScript(self, filename):
+    # recovery : is this file a recovered file?
+    def openScript(self, filename, recovery = False):
         if not self.tabCtrl.getPage(self.findPage(self.panel))\
                .ctrl.isUntouched():
             self.panel = self.createNewPanel()
 
         self.panel.ctrl.loadFile(filename)
         self.panel.ctrl.updateScreen()
-        gd.mru.add(filename)
+        if recovery:
+            self.panel.ctrl.setFile(None)
+            self.panel.ctrl.sp.markChanged(True)
+        else:
+            gd.mru.add(filename)
 
     def checkFonts(self):
         names = ["Normal", "Bold", "Italic", "Bold-Italic"]
@@ -2553,15 +2594,27 @@ class MyFrame(wx.Frame):
 
     def OnCloseWindow(self, event):
         doExit = True
-        if event.CanVeto() and self.isModifications():
-            if wx.MessageBox("You have unsaved changes. Are\n"
-                             "you sure you want to exit?", "Confirm",
-                             wx.YES_NO | wx.NO_DEFAULT, self) == wx.NO:
+        modified = self.isModifications()
+        if event.CanVeto() and modified:
+            dlg = misc.ExitCancelDlg(self,
+                    "UNSAVED changes in these files will be lost:\n\n" +
+                    "\n".join(modified) + "\n\n"
+                    "Are you sure you want to exit?", "Unsaved changes")
+            if dlg.ShowModal() == wx.CANCEL:
                 doExit = False
 
         if doExit:
             util.writeToFile(gd.stateFilename, gd.save(), self)
             util.removeTempFiles(misc.tmpPrefix)
+
+            # clean recovery files of all open tabs..
+            for c in self.getCtrls():
+                c.clearRecovery()
+
+            # .. and any other recovery files (previous session, etc)
+            for f in util.listRecoveryFiles():
+                os.remove(f)
+
             self.Destroy()
             myApp.ExitMainLoop()
         else:
@@ -2583,6 +2636,18 @@ class MyApp(wx.App):
     def OnInit(self):
         global cfgGl, mainFrame, gd
 
+        misc.init()
+
+        # check if another instance is running, using the same config path
+        instanceName = "Trelby-%s" % (misc.confPath)
+        self.instance = wx.SingleInstanceChecker(instanceName)
+        if self.instance.IsAnotherRunning():
+            del self.instance
+            wx.MessageBox("Trelby is already running.",
+                    "Already running",
+                    wx.OK)
+            sys.exit()
+
         if (wx.MAJOR_VERSION != 2) or (wx.MINOR_VERSION != 8):
             wx.MessageBox("You seem to have an invalid version\n"
                           "(%s) of wxWidgets installed. This\n"
@@ -2590,7 +2655,6 @@ class MyApp(wx.App):
                           wx.VERSION_STRING, "Error", wx.OK)
             sys.exit()
 
-        misc.init()
         util.init()
 
         gd = GlobalData()
@@ -2664,7 +2728,18 @@ class MyApp(wx.App):
 
         mainFrame.checkFonts()
 
-        if cfgGl.splashTime > 0:
+        # Check if there are any recovery files, and if present,
+        # recover them, else show startup splash.
+        r = util.listRecoveryFiles()
+        if r:
+            wx.MessageBox("Trelby did not exit cleanly. "
+                          "The following auto-saved files will be recovered.\n\n" +
+                          "\n".join(os.path.basename(f) for f in r),
+                          "Crash recovery", wx.OK)
+            for f in r:
+                mainFrame.openScript(f, recovery = True)
+
+        elif cfgGl.splashTime > 0:
             win = splash.SplashWindow(mainFrame, cfgGl.splashTime * 1000)
             win.Show()
             win.Raise()
@@ -2674,8 +2749,10 @@ class MyApp(wx.App):
 def main():
     global myApp
 
-    opts.init()
+    # disable logging or wx may throw up messageboxes about lock files.
+    wx.Log.EnableLogging(False)
 
+    opts.init()
     myApp = MyApp(0)
     myApp.MainLoop()
 

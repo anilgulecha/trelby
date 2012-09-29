@@ -111,7 +111,8 @@ class MyNavigator(wx.VListBox):
         self.SetItemCount(0)
 
         self.setFonts()
-        wx.EVT_LEFT_DOWN(self, self.OnLeftDown)
+        wx.EVT_LEFT_DOWN(self, self.OnDown)
+        wx.EVT_RIGHT_DOWN(self, self.OnDown)
 
     def setFonts(self):
         cfgGui = self.getCfgGui()
@@ -139,30 +140,34 @@ class MyNavigator(wx.VListBox):
         self.annotatedbgcolor = cfgGui.navAnnotatedBgColor
         self.separatorpen = cfgGui.tabBorderPen
 
-    # Since VListBox provides not easy method to get the mouse position inside
+    # Since VListBox provides no easy method to get the mouse position inside
     # an item when clicked, we implement our own method.
-    def OnLeftDown(self, event):
+    def OnDown(self, event):
         x,y = event.GetPosition()
         count = len(self.items)
         if count == 0:
+            self.selectedIndex = -1
             return
-        a = self.GetFirstVisibleLine()
+        i = self.GetFirstVisibleLine()
 
-        height = self.OnMeasureItem(a) + (NAVMARGIN*2)
+        height = self.OnMeasureItem(i) + (NAVMARGIN*2)
         y -= NAVMARGIN
         while y > height:
             y -= (height + NAVMARGIN)
-            if a == count-1:
+            if i == count-1:
                 break
             else:
-                a += 1
-            height = self.OnMeasureItem(a) + NAVMARGIN
+                i += 1
+            height = self.OnMeasureItem(i) + NAVMARGIN
 
         ln = y // self.itemheight
         if ln <0:
             ln = 0
-        if ln> len(self.items[a].ln_nos)-1:
-            ln = len(self.items[a].ln_nos)-1
+        if ln> len(self.items[i].ln_nos)-1:
+            ln = len(self.items[i].ln_nos)-1
+
+        if i != self.selectedIndex:
+            self.selectItemByIndex(i, False)
         self.subline = ln
         event.Skip()
 
@@ -304,11 +309,13 @@ class MyNavigator(wx.VListBox):
 
 
     # Call when an item is clicked.
+    # Returned the line number in screenplay to goto, or -1 if invalid.
     def getClickedLineNo(self):
-        newIndex = self.GetSelection()
-        self.selectItemByIndex(newIndex, False)
         self.SetSelection(-1)
-        return self.items[self.selectedIndex].ln_nos[self.subline]
+        if self.items:
+            return self.items[self.selectedIndex].ln_nos[self.subline]
+        else:
+            return -1
 
     def OnMeasureItem(self, index):
         return self.itemheight * len(self.items[index].ln_nos)

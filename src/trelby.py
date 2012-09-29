@@ -202,12 +202,20 @@ class MyPanel(wx.Panel):
 
         self.hsizer.Add(self.navsizer, 0, wx.EXPAND)
 
+        self.navMenu = wx.Menu()
+        self.navMenu.Append(ID_NAV_SELECT, "&Select")
+        self.navMenu.Append(ID_NAV_DELETE, "&Delete")
+        wx.EVT_MENU(self, ID_NAV_SELECT, self.ctrl.OnSelectScene)
+        wx.EVT_MENU(self, ID_NAV_DELETE, self.OnContextDelete)
+
         wx.EVT_COMMAND_SCROLL(self, self.scrollBar.GetId(),
                               self.ctrl.OnScroll)
 
         wx.EVT_SET_FOCUS(self.scrollBar, self.OnOtherFocus)
         wx.EVT_SET_FOCUS(self.nav, self.OnOtherFocus)
         wx.EVT_LISTBOX(self, self.nav.GetId(), self.OnItemSelected)
+        wx.EVT_RIGHT_UP(self.nav, self.OnItemSelected)
+        wx.EVT_CONTEXT_MENU(self.nav, self.OnNavContext)
         wx.EVT_BUTTON(self, self.navclose.GetId(), mainFrame.OnToggleShowNavigator)
 
         # vars to track last line count and line for navigator
@@ -232,19 +240,30 @@ class MyPanel(wx.Panel):
     def OnOtherFocus(self, event):
         self.ctrl.SetFocus()
 
-    def OnItemSelected(self, event):
+    def OnItemSelected(self, event = None):
         lineno = self.nav.getClickedLineNo()
 
         if self.ctrl.navTimer.IsRunning():
             self.ctrl.OnNavTimer()
 
-        elif lineno >= len(self.ctrl.sp.lines):
+        elif lineno >= len(self.ctrl.sp.lines) or lineno == -1:
             self.updateNav()
 
         else:
+            self.ctrl.sp.clearMark()
             self.ctrl.sp.gotoPos(lineno, 0)
             self.ctrl.makeLineVisible(lineno)
             self.ctrl.updateScreen()
+
+    def OnNavContext(self, event):
+        self.ctrl.sp.clearMark()
+        self.OnItemSelected()
+        self.PopupMenu(self.navMenu)
+
+    def OnContextDelete(self, event):
+        self.ctrl.OnSelectScene()
+        self.ctrl.OnCut(doUpdate = False, copyToClip = False)
+        self.updateNav()
 
     def updateNav(self):
         # do nothing if navigator is hidden
@@ -1001,7 +1020,7 @@ class MyCtrl(wx.Control):
 
         self.OnPaste(lines)
 
-    def OnSelectScene(self):
+    def OnSelectScene(self, e = None):
         self.sp.cmd("selectScene")
 
         self.makeLineVisible(self.sp.line)
@@ -2174,6 +2193,8 @@ class MyFrame(wx.Frame):
             "ID_ELEM_TO_SHOT",
             "ID_ELEM_TO_ACTBREAK",
             "ID_ELEM_TO_TRANSITION",
+            "ID_NAV_SELECT",
+            "ID_NAV_DELETE",
             ]
 
         g = globals()

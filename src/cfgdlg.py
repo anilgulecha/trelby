@@ -1088,7 +1088,8 @@ class MiscPanel(wx.Panel):
             "Recenter screen on scrolling",
             "Typing replaces selected text",
             "Check script for errors before print, export or compare",
-
+            "Use a block cursor",
+            "Blink the cursor",
         ]
 
         self.checkList = wx.CheckListBox(self, -1, size = (-1, 120))
@@ -1150,6 +1151,8 @@ class MiscPanel(wx.Panel):
         self.cfg.recenterOnScroll = bool(self.checkList.IsChecked(3))
         self.cfg.overwriteSelectionOnInsert = bool(self.checkList.IsChecked(4))
         self.cfg.checkOnExport = bool(self.checkList.IsChecked(5))
+        self.cfg.useBlockCursor = bool(self.checkList.IsChecked(6))
+        self.cfg.blinkCursor = bool(self.checkList.IsChecked(7))
 
         self.cfg.paginateInterval = util.getSpinValue(self.paginateEntry)
         self.cfg.mouseWheelLines = util.getSpinValue(self.wheelScrollEntry)
@@ -1204,6 +1207,8 @@ class MiscPanel(wx.Panel):
         self.checkList.Check(3, self.cfg.recenterOnScroll)
         self.checkList.Check(4, self.cfg.overwriteSelectionOnInsert)
         self.checkList.Check(5, self.cfg.checkOnExport)
+        self.checkList.Check(6, self.cfg.useBlockCursor)
+        self.checkList.Check(7, self.cfg.blinkCursor)
 
         self.paginateEntry.SetValue(self.cfg.paginateInterval)
         self.wheelScrollEntry.SetValue(self.cfg.mouseWheelLines)

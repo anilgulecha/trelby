@@ -1749,6 +1749,10 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
         self.column = 0
         self.markChanged()
 
+    # should we maintain type of line if enter were pressed?
+    def maintainTypeOnEnter(self):
+        return self.column == 0 and self.lines[self.line].text
+
     # split element at current position. newType is type to give to the
     # new element.
     def splitElement(self, newType):
@@ -1761,6 +1765,10 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
 
         u = undo.ManyElems(self, undo.CMD_MISC, self.line, 1, 2)
 
+        maintain = False
+        if self.maintainTypeOnEnter():
+            maintain = True
+
         if not self.acItems:
             if self.isAtEndOfParen():
                 self.column += 1
@@ -1771,7 +1779,8 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
         self.splitLine()
         ls[self.line - 1].lb = LB_LAST
 
-        self.convertTypeTo(newType, False)
+        if not maintain:
+            self.convertTypeTo(newType, False)
 
         self.rewrapPara()
         self.rewrapPrevPara()
@@ -1949,6 +1958,22 @@ Generated with <a href="http://www.trelby.org">Trelby</a>.</p>
             return False
 
         return True
+
+    # Return the (tabtype, entertype) of element if tab/enter were pressed now
+    def getTabEnterTypes(self):
+        c = self.cfgGl
+        cur = c.getType(self.lines[self.line].lt)
+        if self.tabMakesNew():
+            tabNext = "%s" % c.getType(cur.newTypeTab).ti.name
+        else:
+            tabNext = "%s" % c.getType(cur.nextTypeTab).ti.name
+
+        if self.maintainTypeOnEnter():
+            enterNext = cur.ti.name
+        else:
+            enterNext = c.getType(cur.newTypeEnter).ti.name
+
+        return (tabNext, enterNext)
 
     # if auto-completion is active, clear it and return True. otherwise
     # return False.

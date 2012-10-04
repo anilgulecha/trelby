@@ -452,13 +452,7 @@ class MyCtrl(wx.Control):
     # update GUI elements shared by all scripts, like statusbar etc
     def updateCommon(self):
         cur = cfgGl.getType(self.sp.lines[self.sp.line].lt)
-
-        if self.sp.tabMakesNew():
-            tabNext = "%s" % cfgGl.getType(cur.newTypeTab).ti.name
-        else:
-            tabNext = "%s" % cfgGl.getType(cur.nextTypeTab).ti.name
-
-        enterNext = cfgGl.getType(cur.newTypeEnter).ti.name
+        tabNext, enterNext = self.sp.getTabEnterTypes()
 
         page = self.sp.line2page(self.sp.line)
         pageCnt = self.sp.line2page(len(self.sp.lines) - 1)

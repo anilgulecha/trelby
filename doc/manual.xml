@@ -1230,6 +1230,11 @@
 		the cursor position be restored to the point it was at when the
 		script was saved.</para>
 
+		<para>'Use a block cursor' will use a full block as cursor, instead
+		of the default thin line.</para>
+
+		<para>'Blink the cursor' causes the cursor to blink.</para>
+
 		<para>'Recenter screen on scrolling' causes moving around the
 		script using up/down keys to scroll a bit differently: when cursor
 		is at bottom of the screen, and you press down, instead of moving

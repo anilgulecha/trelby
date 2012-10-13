@@ -59,6 +59,8 @@ VIEWMODE_OVERVIEW_SMALL,\
 VIEWMODE_OVERVIEW_LARGE,\
 = range(5)
 
+CURSOR_BLINK_RATE = 500
+
 def refreshGuiConfig():
     global cfgGui
 
@@ -213,6 +215,7 @@ class MyCtrl(wx.Control):
         wx.EVT_CHAR(self, self.OnKeyChar)
 
         self.createEmptySp()
+        self.setCursorDCs()
         self.updateScreen(redraw = False)
 
     def OnChangeType(self, event):
@@ -227,6 +230,36 @@ class MyCtrl(wx.Control):
             self.makeLineVisible(self.sp.line)
 
         self.updateScreen()
+
+    def DrawCursor(self, state):
+        if misc.doDblBuf:
+            dc = wx.ClientDC(self)
+        else:
+            dc = wx.PaintDC(self)
+
+        if state:
+            dc.Blit(self.curx, self.cury, self.curw, self.curh,
+                self.cursorDcOn, 0, 0)
+        else:
+            dc.Blit(self.curx, self.cury, self.curw, self.curh,
+                self.cursorDcOff, 0, 0)
+
+    def setCursorDCs(self):
+        # create empty DCs which will hold the screen data for when
+        # the cursor blink is On or Off. Let the height be a little
+        # bigger(10px) to deal with BOLD fonts being longer in some fonts.
+        fi = cfgGui.tt2fi(self.sp.cfg.getType(screenplay.SCENE).screen)
+        w, h = fi.fx, fi.fy + 10
+
+        self.cursorDcOn = wx.MemoryDC()
+        self.cursorDcOn.SelectObject(
+            wx.EmptyBitmap(w, h))
+
+        self.cursorDcOff = wx.MemoryDC()
+        self.cursorDcOff.SelectObject(
+            wx.EmptyBitmap(w, h))
+
+        self.curx, self.cury, self.curw, self.curh = (0, 0, 0, 0)
 
     def clearVars(self):
         self.mouseSelectActive = False
@@ -500,6 +533,7 @@ class MyCtrl(wx.Control):
 
         for c in mainFrame.getCtrls():
             c.sp.cfgGl = cfgGl
+            c.setCursorDCs()
             c.refreshCache()
             c.makeLineVisible(c.sp.line)
             c.adjustScrollBar()
@@ -1402,6 +1436,7 @@ class MyCtrl(wx.Control):
         #ldkjfldsj = util.TimerDev("paint")
 
         ls = self.sp.lines
+        mainFrame.cursorTimer.Stop()
 
         if misc.doDblBuf:
             dc = wx.BufferedPaintDC(self, self.screenBuf)
@@ -1413,6 +1448,7 @@ class MyCtrl(wx.Control):
         lineh = gd.vm.getLineHeight(self)
         posX = -1
         cursorY = -1
+        cursorFound = False
 
         # auto-comp FontInfo
         acFi = None
@@ -1534,9 +1570,18 @@ class MyCtrl(wx.Control):
                     posX = t.x
                     cursorY = y
                     acFi = fi
-                    dc.SetPen(cfgGui.cursorPen)
-                    dc.SetBrush(cfgGui.cursorBrush)
-                    dc.DrawRectangle(t.x + self.sp.column * fx, y, fx, fi.fy)
+                    cfont = fi.font
+                    cx, cy, cw, ch = t.x + self.sp.column * fx, y, fx, fi.fy
+                    if self.sp.column > len(t.text)-1:
+                        cchar = ""
+                    else:
+                        cchar = t.text[self.sp.column]
+
+                    if cfgGl.useCustomElemColors:
+                        ccol = cfgGui.lt2textColor(ls[t.line].lt)
+                    else:
+                        ccol = cfgGui.textColor
+                    cursorFound = True
 
             if len(t.text) != 0:
                 tl = texts.get(fi.font)
@@ -1580,6 +1625,38 @@ class MyCtrl(wx.Control):
 
         if self.sp.acItems and (cursorY > 0):
             self.drawAutoComp(dc, posX, cursorY, acFi)
+
+        if cursorFound and gd.viewMode not in (
+                VIEWMODE_OVERVIEW_SMALL, VIEWMODE_OVERVIEW_LARGE):
+            # copy after state (as is)
+            self.cursorDcOff.Blit(0, 0, cw, ch, dc, cx, cy)
+
+            if cfgGl.useBlockCursor:
+                # draw the cursor ..
+                dc.SetPen(cfgGui.cursorPen)
+                dc.SetBrush(cfgGui.cursorBrush)
+                dc.DrawRectangle(cx, cy, cw, ch)
+                # .. and the character
+                dc.SetPen(wx.Pen(ccol))
+                dc.SetTextForeground(ccol)
+                dc.SetFont(cfont)
+                dc.DrawText(cchar, cx, cy)
+
+            else:
+                # draw only the cursor.
+                height = 1 + (ch//8)
+                dc.SetPen(wx.Pen(ccol))
+                dc.SetBrush(wx.Brush(ccol))
+                dc.DrawRectangle(cx, cy + (ch-height), cw, height)
+
+            # save ON state.
+            self.cursorDcOn.Blit(0, 0, cw, ch, dc, cx, cy)
+
+            self.curx, self.cury, self.curw, self.curh = cx, cy, cw, ch
+
+            if cfgGl.blinkCursor:
+                # reset cursor timer, so we don't blink when typing.
+                mainFrame.cursorTimer.Start(CURSOR_BLINK_RATE//2)
 
     def drawAutoComp(self, dc, posX, cursorY, fi):
         ac = self.sp.acItems
@@ -1990,6 +2067,11 @@ class MyFrame(wx.Frame):
         wx.EVT_CLOSE(self, self.OnCloseWindow)
         wx.EVT_SET_FOCUS(self, self.OnFocus)
 
+        # Cursor blink state and timer.
+        self.blinkState = False
+        self.cursorTimer = wx.Timer(self)
+        wx.EVT_TIMER(self, self.cursorTimer.GetId(), self.OnCursorTimer)
+
         self.Layout()
 
     def init(self):
@@ -2196,6 +2278,17 @@ class MyFrame(wx.Frame):
                 "will cause the program not to function correctly.\n"
                 "Please change the fonts at File/Settings/Change.\n\n"
                 + "\n".join(failed), "Error", wx.OK, self)
+
+    def OnCursorTimer(self, event):
+        self.panel.ctrl.DrawCursor(self.blinkState)
+        self.blinkState = not self.blinkState
+
+        # Set the timer so that the cursor is shown 2/3rd of the time,
+        # and hidden 1/3 of the time.
+        if self.blinkState:
+            self.cursorTimer.Start(CURSOR_BLINK_RATE//2)
+        else:
+            self.cursorTimer.Start(CURSOR_BLINK_RATE)
 
     # If we get focus, pass it on to ctrl.
     def OnFocus(self, event):

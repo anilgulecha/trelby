@@ -1088,6 +1088,8 @@ class MiscPanel(wx.Panel):
             ("recenterOnScroll", "Recenter screen on scrolling"),
             ("overwriteSelectionOnInsert", "Typing replaces selected text"),
             ("checkOnExport", "Check script for errors before print, export or compare"),
+            ("useBlockCursor","Use a block cursor"),
+            ("blinkCursor","Blink the cursor"),
             ]
 
         self.checkList = wx.CheckListBox(self, -1, size = (-1, 120))
